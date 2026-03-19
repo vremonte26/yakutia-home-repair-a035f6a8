@@ -19,6 +19,7 @@ export default function ProfilePage() {
 
   const switchRole = async () => {
     if (!user) return;
+
     if (isMaster) {
       // Switch to client
       await supabase.from('profiles').update({ role: 'client' as const }).eq('id', user.id);
@@ -26,8 +27,23 @@ export default function ProfilePage() {
       toast({ title: 'Вы теперь клиент' });
       navigate('/');
     } else {
-      // Need to fill master form
-      navigate('/master-setup');
+      // Client wants to become master
+      if (profile.is_verified === null) {
+        // Never filled master form
+        navigate('/master-setup');
+      } else if (profile.is_verified === false) {
+        // Pending moderation
+        toast({
+          title: 'Анкета ещё проверяется',
+          description: 'Мы сообщим, когда всё будет готово.',
+        });
+      } else {
+        // Verified master, just switch
+        await supabase.from('profiles').update({ role: 'master' as const }).eq('id', user.id);
+        await refreshProfile();
+        toast({ title: 'Вы теперь мастер' });
+        navigate('/');
+      }
     }
   };
 
@@ -47,11 +63,11 @@ export default function ProfilePage() {
               <Badge variant={isMaster ? 'default' : 'secondary'}>
                 {isMaster ? '🔧 Мастер' : '👤 Клиент'}
               </Badge>
-              {isMaster && !profile.is_verified && (
+              {isMaster && profile.is_verified === false && (
                 <Badge variant="outline" className="ml-2 text-xs">⏳ На модерации</Badge>
               )}
-              {isMaster && profile.is_verified && (
-                <Badge variant="outline" className="ml-2 text-xs text-success">✅ Проверен</Badge>
+              {isMaster && profile.is_verified === true && (
+                <Badge variant="outline" className="ml-2 text-xs text-green-600">✅ Проверен</Badge>
               )}
             </div>
           </div>
