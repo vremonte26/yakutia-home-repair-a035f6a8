@@ -13,15 +13,16 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
 export default function MasterSetup() {
-  const { user, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [categories, setCategories] = useState<string[]>([]);
   const [workArea, setWorkArea] = useState('');
   const [about, setAbout] = useState('');
-  const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const name = profile?.name || '';
 
   const toggleCategory = (val: string) => {
     setCategories(prev =>
