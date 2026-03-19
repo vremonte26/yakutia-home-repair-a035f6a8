@@ -46,7 +46,6 @@ export default function MasterSetup() {
       .from('profiles')
       .update({
         role: 'master' as const,
-        name: name.trim() || undefined,
         categories,
         work_area: workArea,
         about,
