@@ -49,12 +49,9 @@ function AppRoutes() {
     );
   }
 
-  // Master with is_verified === false (pending moderation) acting as master
-  const isMasterPendingModeration = profile?.role === 'master' && profile?.is_verified === false;
-
   return (
     <Routes>
-      <Route path="/" element={isMasterPendingModeration ? <Navigate to="/moderation-pending" replace /> : <Index />} />
+      <Route path="/" element={<Index />} />
       <Route path="/role-selection" element={<RoleSelection />} />
       <Route path="/master-setup" element={<MasterSetup />} />
       <Route path="/moderation-pending" element={<ModerationPending />} />
