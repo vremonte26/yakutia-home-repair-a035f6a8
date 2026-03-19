@@ -3,10 +3,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { CategoryBadge } from '@/components/CategoryBadge';
-import { Clock } from 'lucide-react';
+import { Clock, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
+import { useToast } from '@/hooks/use-toast';
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Ожидает',
@@ -22,21 +24,41 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive'> = 
 
 export default function MyResponses() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [responses, setResponses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [withdrawing, setWithdrawing] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchResponses = async () => {
     if (!user) return;
-    supabase
+    const { data } = await supabase
       .from('responses')
       .select('*, tasks(*)')
       .eq('master_id', user.id)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        setResponses(data ?? []);
-        setLoading(false);
-      });
+      .order('created_at', { ascending: false });
+    setResponses(data ?? []);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchResponses();
   }, [user]);
+
+  const withdrawResponse = async (responseId: string) => {
+    setWithdrawing(responseId);
+    const { error } = await supabase
+      .from('responses')
+      .delete()
+      .eq('id', responseId);
+
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Отклик отозван' });
+      await fetchResponses();
+    }
+    setWithdrawing(null);
+  };
 
   if (loading) {
     return (
@@ -70,6 +92,24 @@ export default function MyResponses() {
                   <Clock className="h-3 w-3" />
                   {formatDistanceToNow(new Date(r.created_at), { addSuffix: true, locale: ru })}
                 </div>
+
+                {r.status === 'pending' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-1 mt-1"
+                    disabled={withdrawing === r.id}
+                    onClick={() => withdrawResponse(r.id)}
+                  >
+                    <X className="h-3.5 w-3.5" /> Отозвать отклик
+                  </Button>
+                )}
+
+                {r.status === 'accepted' && (
+                  <p className="text-xs text-muted-foreground italic">
+                    Вы выбраны исполнителем. Свяжитесь с клиентом через чат.
+                  </p>
+                )}
               </CardContent>
             </Card>
           ))}

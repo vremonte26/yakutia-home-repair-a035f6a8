@@ -37,7 +37,6 @@ export default function TaskDetail() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const isClient = profile?.role === 'client';
   const isOwner = task?.client_id === user?.id;
 
   const fetchData = async () => {
@@ -68,16 +67,14 @@ export default function TaskDetail() {
     fetchData();
   }, [id]);
 
-  const acceptMaster = async (responseId: string, masterId: string) => {
+  const acceptMaster = async (responseId: string) => {
     setActionLoading(responseId);
     try {
-      // Accept this response
       await supabase
         .from('responses')
         .update({ status: 'accepted' })
         .eq('id', responseId);
 
-      // Set task to in_progress
       await supabase
         .from('tasks')
         .update({ status: 'in_progress' })
@@ -91,26 +88,22 @@ export default function TaskDetail() {
     setActionLoading(null);
   };
 
-  const rejectMaster = async (responseId: string) => {
+  const cancelMaster = async (responseId: string) => {
     setActionLoading(responseId);
     try {
+      // Reject (block) this master for this task
       await supabase
         .from('responses')
         .update({ status: 'rejected' })
         .eq('id', responseId);
 
-      // If this was the accepted master, revert task to open
-      const response = responses.find(r => r.id === responseId);
-      if (response?.status === 'accepted') {
-        // Check if there are other pending responses
-        const pendingCount = responses.filter(r => r.id !== responseId && r.status === 'pending').length;
-        await supabase
-          .from('tasks')
-          .update({ status: pendingCount > 0 ? 'open' : 'open' })
-          .eq('id', id);
-      }
+      // Revert task to open so client can pick from reserve
+      await supabase
+        .from('tasks')
+        .update({ status: 'open' })
+        .eq('id', id);
 
-      toast({ title: 'Мастер отклонён' });
+      toast({ title: 'Мастер отменён. Выберите другого из резерва.' });
       await fetchData();
     } catch (e: any) {
       toast({ title: 'Ошибка', description: e.message, variant: 'destructive' });
@@ -137,7 +130,6 @@ export default function TaskDetail() {
 
   const acceptedResponse = responses.find(r => r.status === 'accepted');
   const pendingResponses = responses.filter(r => r.status === 'pending');
-  const rejectedResponses = responses.filter(r => r.status === 'rejected');
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -171,7 +163,6 @@ export default function TaskDetail() {
         </CardContent>
       </Card>
 
-      {/* Responses section - only for task owner */}
       {isOwner && (
         <div className="space-y-3">
           <h2 className="text-base font-bold">
@@ -184,7 +175,7 @@ export default function TaskDetail() {
               <MasterCard
                 response={acceptedResponse}
                 isAccepted
-                onReject={() => rejectMaster(acceptedResponse.id)}
+                onCancel={() => cancelMaster(acceptedResponse.id)}
                 loading={actionLoading === acceptedResponse.id}
               />
             </div>
@@ -200,8 +191,7 @@ export default function TaskDetail() {
                   key={r.id}
                   response={r}
                   canAccept={!acceptedResponse && task.status === 'open'}
-                  onAccept={() => acceptMaster(r.id, r.master_id)}
-                  onReject={() => rejectMaster(r.id)}
+                  onAccept={() => acceptMaster(r.id)}
                   loading={actionLoading === r.id}
                 />
               ))}
@@ -222,14 +212,14 @@ function MasterCard({
   isAccepted,
   canAccept,
   onAccept,
-  onReject,
+  onCancel,
   loading,
 }: {
   response: ResponseWithMaster;
   isAccepted?: boolean;
   canAccept?: boolean;
   onAccept?: () => void;
-  onReject?: () => void;
+  onCancel?: () => void;
   loading?: boolean;
 }) {
   const master = response.profiles;
@@ -273,14 +263,9 @@ function MasterCard({
               <CheckCircle className="h-3.5 w-3.5" /> Выбрать
             </Button>
           )}
-          {isAccepted && onReject && (
-            <Button size="sm" variant="destructive" className="flex-1 gap-1" onClick={onReject} disabled={loading}>
-              <XCircle className="h-3.5 w-3.5" /> Отказать
-            </Button>
-          )}
-          {!isAccepted && !canAccept && onReject && (
-            <Button size="sm" variant="outline" className="gap-1" onClick={onReject} disabled={loading}>
-              <XCircle className="h-3.5 w-3.5" /> Отклонить
+          {isAccepted && onCancel && (
+            <Button size="sm" variant="destructive" className="flex-1 gap-1" onClick={onCancel} disabled={loading}>
+              <XCircle className="h-3.5 w-3.5" /> Отменить мастера
             </Button>
           )}
         </div>
