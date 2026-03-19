@@ -13,6 +13,7 @@ import CreateTask from "./pages/CreateTask";
 import MyResponses from "./pages/MyResponses";
 import ProfilePage from "./pages/ProfilePage";
 import { AppLayout } from "./components/AppLayout";
+import TaskDetail from "./pages/TaskDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
