@@ -82,10 +82,9 @@ export default function MasterSetup() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Ваше имя</label>
               <Input
-                placeholder="Иван Иванов"
                 value={name}
-                onChange={e => setName(e.target.value)}
-                required
+                disabled
+                className="bg-muted"
               />
             </div>
 
