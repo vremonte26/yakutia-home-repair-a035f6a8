@@ -20,9 +20,8 @@ export default function MasterSetup() {
   const [workArea, setWorkArea] = useState('');
   const [about, setAbout] = useState('');
   const [phone, setPhone] = useState('');
+  const [name, setName] = useState(profile?.name || '');
   const [loading, setLoading] = useState(false);
-
-  const name = profile?.name || '';
 
   const toggleCategory = (val: string) => {
     setCategories(prev =>
@@ -33,6 +32,10 @@ export default function MasterSetup() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    if (!name.trim()) {
+      toast({ title: 'Введите имя', variant: 'destructive' });
+      return;
+    }
     if (categories.length === 0) {
       toast({ title: 'Выберите хотя бы одну категорию', variant: 'destructive' });
       return;
@@ -48,6 +51,7 @@ export default function MasterSetup() {
     const { error } = await supabase
       .from('profiles')
       .update({
+        name: name.trim(),
         role: 'master' as const,
         categories,
         work_area: workArea,
@@ -91,8 +95,9 @@ export default function MasterSetup() {
               <label className="text-sm font-medium">Ваше имя</label>
               <Input
                 value={name}
-                disabled
-                className="bg-muted"
+                onChange={e => setName(e.target.value)}
+                placeholder="Ваше имя"
+                required
               />
             </div>
 
