@@ -32,6 +32,10 @@ export default function MasterSetup() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    if (!name.trim()) {
+      toast({ title: 'Введите имя', variant: 'destructive' });
+      return;
+    }
     if (categories.length === 0) {
       toast({ title: 'Выберите хотя бы одну категорию', variant: 'destructive' });
       return;
