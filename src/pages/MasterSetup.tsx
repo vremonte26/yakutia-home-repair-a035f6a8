@@ -51,6 +51,7 @@ export default function MasterSetup() {
     const { error } = await supabase
       .from('profiles')
       .update({
+        name: name.trim(),
         role: 'master' as const,
         categories,
         work_area: workArea,
