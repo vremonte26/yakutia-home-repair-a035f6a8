@@ -14,7 +14,247 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      complaints: {
+        Row: {
+          created_at: string
+          from_user: string
+          id: string
+          reason: string
+          task_id: string | null
+          to_user: string
+        }
+        Insert: {
+          created_at?: string
+          from_user: string
+          id?: string
+          reason: string
+          task_id?: string | null
+          to_user: string
+        }
+        Update: {
+          created_at?: string
+          from_user?: string
+          id?: string
+          reason?: string
+          task_id?: string | null
+          to_user?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complaints_from_user_fkey"
+            columns: ["from_user"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "complaints_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "complaints_to_user_fkey"
+            columns: ["to_user"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          about: string | null
+          categories: string[] | null
+          created_at: string
+          id: string
+          is_active: boolean
+          is_verified: boolean
+          name: string
+          phone: string | null
+          photo: string | null
+          rating: number | null
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+          work_area: string | null
+        }
+        Insert: {
+          about?: string | null
+          categories?: string[] | null
+          created_at?: string
+          id: string
+          is_active?: boolean
+          is_verified?: boolean
+          name?: string
+          phone?: string | null
+          photo?: string | null
+          rating?: number | null
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          work_area?: string | null
+        }
+        Update: {
+          about?: string | null
+          categories?: string[] | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_verified?: boolean
+          name?: string
+          phone?: string | null
+          photo?: string | null
+          rating?: number | null
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+          work_area?: string | null
+        }
+        Relationships: []
+      }
+      responses: {
+        Row: {
+          created_at: string
+          id: string
+          master_id: string
+          message: string | null
+          status: Database["public"]["Enums"]["response_status"]
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          master_id: string
+          message?: string | null
+          status?: Database["public"]["Enums"]["response_status"]
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          master_id?: string
+          message?: string | null
+          status?: Database["public"]["Enums"]["response_status"]
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "responses_master_id_fkey"
+            columns: ["master_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "responses_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          from_user: string
+          id: string
+          rating: number
+          task_id: string | null
+          to_user: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          from_user: string
+          id?: string
+          rating: number
+          task_id?: string | null
+          to_user: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          from_user?: string
+          id?: string
+          rating?: number
+          task_id?: string | null
+          to_user?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_from_user_fkey"
+            columns: ["from_user"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_to_user_fkey"
+            columns: ["to_user"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          address: string | null
+          category: string
+          client_id: string
+          created_at: string
+          description: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          category: string
+          client_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          status?: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          category?: string
+          client_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          status?: Database["public"]["Enums"]["task_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +263,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      app_role: "client" | "master"
+      response_status: "pending" | "accepted" | "rejected"
+      task_status: "open" | "in_progress" | "completed" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +392,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["client", "master"],
+      response_status: ["pending", "accepted", "rejected"],
+      task_status: ["open", "in_progress", "completed", "cancelled"],
+    },
   },
 } as const
