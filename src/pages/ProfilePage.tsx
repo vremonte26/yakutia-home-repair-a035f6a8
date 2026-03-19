@@ -5,15 +5,27 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CategoryBadge } from '@/components/CategoryBadge';
-import { LogOut, ArrowLeftRight, Star, MapPin, Phone, Clock, X } from 'lucide-react';
+import { LogOut, ArrowLeftRight, Star, MapPin, Phone, Clock, X, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 export default function ProfilePage() {
   const { profile, signOut, refreshProfile, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [showPendingNotice, setShowPendingNotice] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   if (!profile) return null;
 
@@ -38,6 +50,33 @@ export default function ProfilePage() {
         toast({ title: 'Вы теперь мастер' });
         navigate('/');
       }
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    setIsDeleting(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error('No session');
+
+      const res = await supabase.functions.invoke('delete-account', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.error) throw res.error;
+
+      await supabase.auth.signOut();
+      navigate('/auth');
+      toast({
+        title: 'Аккаунт удалён',
+        description: 'Ваш аккаунт успешно удалён. Вы можете зарегистрироваться снова в любое время.',
+      });
+    } catch (err: any) {
+      toast({ title: 'Ошибка', description: err.message || 'Не удалось удалить аккаунт', variant: 'destructive' });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -124,6 +163,33 @@ export default function ProfilePage() {
           <LogOut className="h-4 w-4 mr-2" />
           Выйти
         </Button>
+
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="ghost" className="w-full text-destructive hover:text-destructive hover:bg-destructive/10">
+              <Trash2 className="h-4 w-4 mr-2" />
+              Удалить аккаунт
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Вы уверены?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Все ваши данные (профиль, заказы, отклики, чаты) будут безвозвратно удалены. Это действие нельзя отменить.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Отмена</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteAccount}
+                disabled={isDeleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {isDeleting ? 'Удаление...' : 'Удалить навсегда'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
