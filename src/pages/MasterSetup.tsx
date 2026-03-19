@@ -13,15 +13,16 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 
 export default function MasterSetup() {
-  const { user, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [categories, setCategories] = useState<string[]>([]);
   const [workArea, setWorkArea] = useState('');
   const [about, setAbout] = useState('');
-  const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const name = profile?.name || '';
 
   const toggleCategory = (val: string) => {
     setCategories(prev =>
@@ -45,7 +46,6 @@ export default function MasterSetup() {
       .from('profiles')
       .update({
         role: 'master' as const,
-        name: name.trim() || undefined,
         categories,
         work_area: workArea,
         about,
@@ -82,10 +82,9 @@ export default function MasterSetup() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Ваше имя</label>
               <Input
-                placeholder="Иван Иванов"
                 value={name}
-                onChange={e => setName(e.target.value)}
-                required
+                disabled
+                className="bg-muted"
               />
             </div>
 
