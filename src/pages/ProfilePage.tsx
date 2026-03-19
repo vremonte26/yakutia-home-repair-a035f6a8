@@ -1,10 +1,11 @@
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CategoryBadge } from '@/components/CategoryBadge';
-import { LogOut, ArrowLeftRight, Star, MapPin, Phone } from 'lucide-react';
+import { LogOut, ArrowLeftRight, Star, MapPin, Phone, Clock, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 
@@ -12,6 +13,7 @@ export default function ProfilePage() {
   const { profile, signOut, refreshProfile, user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [showPendingNotice, setShowPendingNotice] = useState(false);
 
   if (!profile) return null;
 
@@ -21,24 +23,16 @@ export default function ProfilePage() {
     if (!user) return;
 
     if (isMaster) {
-      // Switch to client
       await supabase.from('profiles').update({ role: 'client' as const }).eq('id', user.id);
       await refreshProfile();
       toast({ title: 'Вы теперь клиент' });
       navigate('/');
     } else {
-      // Client wants to become master
       if (profile.is_verified === null) {
-        // Never filled master form
         navigate('/master-setup');
       } else if (profile.is_verified === false) {
-        // Pending moderation
-        toast({
-          title: 'Анкета ещё проверяется',
-          description: 'Мы сообщим, когда всё будет готово.',
-        });
+        setShowPendingNotice(true);
       } else {
-        // Verified master, just switch
         await supabase.from('profiles').update({ role: 'master' as const }).eq('id', user.id);
         await refreshProfile();
         toast({ title: 'Вы теперь мастер' });
@@ -49,6 +43,26 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-4 animate-fade-in">
+      {showPendingNotice && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="p-6 text-center space-y-4">
+            <div className="mx-auto w-12 h-12 rounded-full bg-accent flex items-center justify-center">
+              <Clock className="h-6 w-6 text-primary" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="font-bold text-base">Анкета на проверке</h3>
+              <p className="text-muted-foreground text-sm">
+                Ваша анкета на проверке. Обычно это занимает до 24 часов. Мы сообщим, когда всё готово.
+              </p>
+            </div>
+            <Button variant="outline" className="w-full" onClick={() => setShowPendingNotice(false)}>
+              <X className="h-4 w-4 mr-2" />
+              Закрыть
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="text-xl font-extrabold">Профиль</CardTitle>
@@ -63,12 +77,6 @@ export default function ProfilePage() {
               <Badge variant={isMaster ? 'default' : 'secondary'}>
                 {isMaster ? '🔧 Мастер' : '👤 Клиент'}
               </Badge>
-              {isMaster && profile.is_verified === false && (
-                <Badge variant="outline" className="ml-2 text-xs">⏳ На модерации</Badge>
-              )}
-              {isMaster && profile.is_verified === true && (
-                <Badge variant="outline" className="ml-2 text-xs text-green-600">✅ Проверен</Badge>
-              )}
             </div>
           </div>
 
