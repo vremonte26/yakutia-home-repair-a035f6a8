@@ -250,7 +250,7 @@ function MasterCard({
             <p className="font-semibold text-sm truncate">{master.name}</p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="flex items-center gap-0.5">
-                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
                 {master.rating?.toFixed(1) ?? '—'}
               </span>
               <span>
