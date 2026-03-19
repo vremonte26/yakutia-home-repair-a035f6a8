@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CATEGORIES, WORK_AREAS } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 
 export default function MasterSetup() {
   const { user, refreshProfile } = useAuth();
@@ -18,6 +19,7 @@ export default function MasterSetup() {
   const [categories, setCategories] = useState<string[]>([]);
   const [workArea, setWorkArea] = useState('');
   const [about, setAbout] = useState('');
+  const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -34,15 +36,20 @@ export default function MasterSetup() {
       toast({ title: 'Выберите хотя бы одну категорию', variant: 'destructive' });
       return;
     }
+    if (!workArea) {
+      toast({ title: 'Выберите район работы', variant: 'destructive' });
+      return;
+    }
     setLoading(true);
     const { error } = await supabase
       .from('profiles')
       .update({
         role: 'master' as const,
+        name: name.trim() || undefined,
         categories,
         work_area: workArea,
         about,
-        phone,
+        phone: phone || undefined,
         is_verified: false,
       })
       .eq('id', user.id);
@@ -52,26 +59,42 @@ export default function MasterSetup() {
       return;
     }
     await refreshProfile();
-    toast({ title: 'Анкета отправлена!', description: 'Ожидайте модерации' });
-    navigate('/');
+    navigate('/moderation-pending');
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-lg animate-fade-in">
         <CardHeader>
+          <button
+            type="button"
+            onClick={() => navigate('/role-selection')}
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Назад
+          </button>
           <CardTitle className="text-xl font-extrabold">Анкета мастера</CardTitle>
           <CardDescription>Заполните анкету для прохождения модерации</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Телефон</label>
+              <label className="text-sm font-medium">Ваше имя</label>
+              <Input
+                placeholder="Иван Иванов"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Телефон для связи</label>
               <Input
                 placeholder="+7 (___) ___-__-__"
                 value={phone}
                 onChange={e => setPhone(e.target.value)}
-                required
               />
             </div>
 
