@@ -4,24 +4,44 @@ import { supabase } from '@/integrations/supabase/client';
 import { TaskCard } from '@/components/TaskCard';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function ClientDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState<any[]>([]);
+  const [responseCounts, setResponseCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from('tasks')
-      .select('*')
-      .eq('client_id', user.id)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        setTasks(data ?? []);
-        setLoading(false);
-      });
+    const fetchData = async () => {
+      const { data: tasksData } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('client_id', user.id)
+        .order('created_at', { ascending: false });
+
+      setTasks(tasksData ?? []);
+
+      if (tasksData && tasksData.length > 0) {
+        const taskIds = tasksData.map(t => t.id);
+        const { data: responses } = await supabase
+          .from('responses')
+          .select('task_id')
+          .in('task_id', taskIds)
+          .neq('status', 'rejected');
+
+        const counts: Record<string, number> = {};
+        (responses ?? []).forEach(r => {
+          counts[r.task_id] = (counts[r.task_id] || 0) + 1;
+        });
+        setResponseCounts(counts);
+      }
+
+      setLoading(false);
+    };
+    fetchData();
   }, [user]);
 
   if (loading) {
@@ -53,9 +73,22 @@ export default function ClientDashboard() {
         </div>
       ) : (
         <div className="space-y-3">
-          {tasks.map(task => (
-            <TaskCard key={task.id} task={task} onClick={() => {}} />
-          ))}
+          {tasks.map(task => {
+            const count = responseCounts[task.id] || 0;
+            return (
+              <TaskCard
+                key={task.id}
+                task={task}
+                onClick={() => navigate(`/task/${task.id}`)}
+              >
+                {count > 0 && (
+                  <p className="text-xs text-primary font-medium mt-1">
+                    {count} {count === 1 ? 'отклик' : count < 5 ? 'отклика' : 'откликов'} — нажмите, чтобы посмотреть
+                  </p>
+                )}
+              </TaskCard>
+            );
+          })}
         </div>
       )}
     </div>
