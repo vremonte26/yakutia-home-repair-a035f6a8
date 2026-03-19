@@ -270,11 +270,8 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {isMaster && profile.rating !== null && profile.rating > 0 && (
-            <div className="flex items-center gap-1 text-sm">
-              <Star className="h-4 w-4 text-primary fill-primary" />
-              <span className="font-semibold">{profile.rating}</span>
-            </div>
+          {(profile.rating !== null && profile.rating > 0 || reviewCount > 0) && (
+            <UserRating rating={profile.rating} reviewCount={reviewCount} size="md" />
           )}
 
           {isMaster && profile.work_area && (
