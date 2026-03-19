@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CategoryBadge } from '@/components/CategoryBadge';
-import { LogOut, ArrowLeftRight, Star, MapPin, Phone, Clock, X, Trash2 } from 'lucide-react';
+import { LogOut, ArrowLeftRight, Star, MapPin, Phone, Clock, X, Trash2, Pencil, Camera, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -26,10 +27,94 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const [showPendingNotice, setShowPendingNotice] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!profile) return null;
 
   const isMaster = profile.role === 'master';
+
+  const startEditing = () => {
+    setEditName(profile.name || '');
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setEditName('');
+  };
+
+  const saveProfile = async () => {
+    if (!user) return;
+    const trimmed = editName.trim();
+    if (!trimmed) {
+      toast({ title: 'Имя не может быть пустым', variant: 'destructive' });
+      return;
+    }
+    setIsSaving(true);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ name: trimmed })
+      .eq('id', user.id);
+    setIsSaving(false);
+    if (error) {
+      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      return;
+    }
+    await refreshProfile();
+    setIsEditing(false);
+    toast({ title: 'Имя обновлено' });
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Выберите изображение', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: 'Максимальный размер — 2 МБ', variant: 'destructive' });
+      return;
+    }
+
+    setUploadingPhoto(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const filePath = `${user.id}/avatar.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const photoUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ photo: photoUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      await refreshProfile();
+      toast({ title: 'Фото обновлено' });
+    } catch (err: any) {
+      toast({ title: 'Ошибка загрузки', description: err.message, variant: 'destructive' });
+    } finally {
+      setUploadingPhoto(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   const switchRole = async () => {
     if (!user) return;
@@ -108,11 +193,59 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-accent flex items-center justify-center text-2xl font-bold text-accent-foreground">
-              {profile.name?.[0]?.toUpperCase() || '?'}
+            <div className="relative group">
+              {profile.photo ? (
+                <img
+                  src={profile.photo}
+                  alt={profile.name}
+                  className="w-16 h-16 rounded-2xl object-cover"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-2xl bg-accent flex items-center justify-center text-2xl font-bold text-accent-foreground">
+                  {profile.name?.[0]?.toUpperCase() || '?'}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingPhoto}
+                className="absolute inset-0 rounded-2xl bg-foreground/0 hover:bg-foreground/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+              >
+                <Camera className="h-5 w-5 text-background" />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handlePhotoUpload}
+              />
             </div>
-            <div>
-              <h2 className="font-bold text-lg">{profile.name || 'Без имени'}</h2>
+            <div className="flex-1 min-w-0">
+              {isEditing ? (
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    className="h-9"
+                    autoFocus
+                    onKeyDown={e => e.key === 'Enter' && saveProfile()}
+                  />
+                  <Button size="icon" variant="ghost" onClick={saveProfile} disabled={isSaving} className="shrink-0">
+                    <Check className="h-4 w-4" />
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={cancelEditing} className="shrink-0">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold text-lg truncate">{profile.name || 'Без имени'}</h2>
+                  <button type="button" onClick={startEditing} className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
               <Badge variant={isMaster ? 'default' : 'secondary'}>
                 {isMaster ? '🔧 Мастер' : '👤 Клиент'}
               </Badge>
