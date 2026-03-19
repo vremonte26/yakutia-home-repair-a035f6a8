@@ -32,7 +32,17 @@ export default function ProfilePage() {
   const [editName, setEditName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [reviewCount, setReviewCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('reviews')
+      .select('id')
+      .eq('to_user', user.id)
+      .then(({ data }) => setReviewCount(data?.length ?? 0));
+  }, [user]);
 
   if (!profile) return null;
 
