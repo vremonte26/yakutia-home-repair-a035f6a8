@@ -11,28 +11,66 @@ export default function MasterDashboard() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const [tasks, setTasks] = useState<any[]>([]);
+  const [respondedTaskIds, setRespondedTaskIds] = useState<Set<string>>(new Set());
+  const [responseCounts, setResponseCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string | null>(null);
 
   useEffect(() => {
-    let query = supabase
-      .from('tasks')
-      .select('*')
-      .eq('status', 'open')
-      .order('created_at', { ascending: false });
+    const fetchTasks = async () => {
+      if (!user) return;
 
-    if (filter) {
-      query = query.eq('category', filter);
-    }
+      let query = supabase
+        .from('tasks')
+        .select('*')
+        .eq('status', 'open')
+        .order('created_at', { ascending: false });
 
-    query.then(({ data }) => {
-      setTasks(data ?? []);
+      if (filter) {
+        query = query.eq('category', filter);
+      }
+
+      const { data: tasksData } = await query;
+      setTasks(tasksData ?? []);
+
+      // Get my existing responses
+      const { data: myResponses } = await supabase
+        .from('responses')
+        .select('task_id')
+        .eq('master_id', user.id);
+
+      setRespondedTaskIds(new Set((myResponses ?? []).map(r => r.task_id)));
+
+      // Get response counts for each task
+      if (tasksData && tasksData.length > 0) {
+        const taskIds = tasksData.map(t => t.id);
+        const { data: allResponses } = await supabase
+          .from('responses')
+          .select('task_id')
+          .in('task_id', taskIds)
+          .neq('status', 'rejected');
+
+        const counts: Record<string, number> = {};
+        (allResponses ?? []).forEach(r => {
+          counts[r.task_id] = (counts[r.task_id] || 0) + 1;
+        });
+        setResponseCounts(counts);
+      }
+
       setLoading(false);
-    });
-  }, [filter]);
+    };
+
+    fetchTasks();
+  }, [filter, user]);
 
   const respond = async (taskId: string) => {
     if (!user) return;
+
+    if ((responseCounts[taskId] || 0) >= 5) {
+      toast({ title: 'Максимум откликов на этот заказ', variant: 'destructive' });
+      return;
+    }
+
     const { error } = await supabase.from('responses').insert({
       task_id: taskId,
       master_id: user.id,
@@ -40,11 +78,15 @@ export default function MasterDashboard() {
     if (error) {
       if (error.code === '23505') {
         toast({ title: 'Вы уже откликнулись на этот заказ', variant: 'destructive' });
+      } else if (error.message?.includes('Maximum 5')) {
+        toast({ title: 'Максимум 5 откликов на заказ', variant: 'destructive' });
       } else {
         toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
       }
       return;
     }
+    setRespondedTaskIds(prev => new Set(prev).add(taskId));
+    setResponseCounts(prev => ({ ...prev, [taskId]: (prev[taskId] || 0) + 1 }));
     toast({ title: 'Отклик отправлен!' });
   };
 
@@ -94,20 +136,29 @@ export default function MasterDashboard() {
         </div>
       ) : (
         <div className="space-y-3">
-          {tasks.map(task => (
-            <TaskCard key={task.id} task={task}>
-              <Button
-                size="sm"
-                className="mt-2 w-full"
-                onClick={e => {
-                  e.stopPropagation();
-                  respond(task.id);
-                }}
-              >
-                Откликнуться
-              </Button>
-            </TaskCard>
-          ))}
+          {tasks.map(task => {
+            const alreadyResponded = respondedTaskIds.has(task.id);
+            const count = responseCounts[task.id] || 0;
+            const isFull = count >= 5;
+
+            return (
+              <TaskCard key={task.id} task={task}>
+                <div className="flex items-center justify-between mt-2 gap-2">
+                  <span className="text-xs text-muted-foreground">{count}/5 откликов</span>
+                  <Button
+                    size="sm"
+                    disabled={alreadyResponded || isFull}
+                    onClick={e => {
+                      e.stopPropagation();
+                      respond(task.id);
+                    }}
+                  >
+                    {alreadyResponded ? '✓ Вы откликнулись' : isFull ? 'Набрано' : 'Откликнуться'}
+                  </Button>
+                </div>
+              </TaskCard>
+            );
+          })}
         </div>
       )}
     </div>

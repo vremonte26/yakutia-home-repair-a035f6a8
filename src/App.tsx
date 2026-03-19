@@ -13,6 +13,7 @@ import CreateTask from "./pages/CreateTask";
 import MyResponses from "./pages/MyResponses";
 import ProfilePage from "./pages/ProfilePage";
 import { AppLayout } from "./components/AppLayout";
+import TaskDetail from "./pages/TaskDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,6 +58,7 @@ function AppRoutes() {
       <Route path="/moderation-pending" element={<ModerationPending />} />
       <Route path="/create-task" element={<AppLayout><CreateTask /></AppLayout>} />
       <Route path="/my-responses" element={<AppLayout><MyResponses /></AppLayout>} />
+      <Route path="/task/:id" element={<AppLayout><TaskDetail /></AppLayout>} />
       <Route path="/profile" element={<AppLayout><ProfilePage /></AppLayout>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
