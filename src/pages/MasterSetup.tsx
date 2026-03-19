@@ -95,8 +95,9 @@ export default function MasterSetup() {
               <label className="text-sm font-medium">Ваше имя</label>
               <Input
                 value={name}
-                disabled
-                className="bg-muted"
+                onChange={e => setName(e.target.value)}
+                placeholder="Ваше имя"
+                required
               />
             </div>
 
