@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CategoryBadge } from '@/components/CategoryBadge';
-import { LogOut, ArrowLeftRight, Star, MapPin, Phone, Clock, X, Trash2, Pencil, Camera, Check } from 'lucide-react';
+import { UserRating } from '@/components/UserRating';
+import { LogOut, ArrowLeftRight, MapPin, Phone, Clock, X, Trash2, Pencil, Camera, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -31,7 +32,17 @@ export default function ProfilePage() {
   const [editName, setEditName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [reviewCount, setReviewCount] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('reviews')
+      .select('id')
+      .eq('to_user', user.id)
+      .then(({ data }) => setReviewCount(data?.length ?? 0));
+  }, [user]);
 
   if (!profile) return null;
 
@@ -259,11 +270,8 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {isMaster && profile.rating !== null && profile.rating > 0 && (
-            <div className="flex items-center gap-1 text-sm">
-              <Star className="h-4 w-4 text-primary fill-primary" />
-              <span className="font-semibold">{profile.rating}</span>
-            </div>
+          {(profile.rating !== null && profile.rating > 0 || reviewCount > 0) && (
+            <UserRating rating={profile.rating} reviewCount={reviewCount} size="md" />
           )}
 
           {isMaster && profile.work_area && (
