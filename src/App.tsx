@@ -35,7 +35,6 @@ function AppRoutes() {
     );
   }
 
-  // New user without a name set — show role selection
   if (profile && !profile.name) {
     return (
       <Routes>
@@ -61,15 +60,15 @@ function AppRoutes() {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
+    <BrowserRouter>
       <AuthProvider>
-        <BrowserRouter>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
           <AppRoutes />
-        </BrowserRouter>
+        </TooltipProvider>
       </AuthProvider>
-    </TooltipProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 
