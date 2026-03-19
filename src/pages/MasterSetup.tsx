@@ -20,9 +20,8 @@ export default function MasterSetup() {
   const [workArea, setWorkArea] = useState('');
   const [about, setAbout] = useState('');
   const [phone, setPhone] = useState('');
+  const [name, setName] = useState(profile?.name || '');
   const [loading, setLoading] = useState(false);
-
-  const name = profile?.name || '';
 
   const toggleCategory = (val: string) => {
     setCategories(prev =>
