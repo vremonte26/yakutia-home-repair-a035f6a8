@@ -1,0 +1,31 @@
+export const CATEGORIES = [
+  { value: 'plumbing', label: 'Сантехника', icon: '🔧' },
+  { value: 'electrical', label: 'Электрика', icon: '⚡' },
+  { value: 'furniture', label: 'Сборка мебели', icon: '🪑' },
+  { value: 'minor_repair', label: 'Мелкий ремонт', icon: '🔨' },
+  { value: 'painting', label: 'Покраска', icon: '🎨' },
+  { value: 'tiling', label: 'Плитка', icon: '🧱' },
+  { value: 'other', label: 'Другое', icon: '🛠️' },
+] as const;
+
+export const WORK_AREAS = [
+  'Якутск — центр',
+  'Якутск — Залог',
+  'Якутск — ДСК',
+  'Якутск — Сайсары',
+  'Якутск — Птицефабрика',
+  'Якутск — Марха',
+  'Якутск — Жатай',
+  'Нерюнгри',
+  'Мирный',
+  'Алдан',
+] as const;
+
+export type TaskStatus = 'open' | 'in_progress' | 'completed' | 'cancelled';
+
+export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
+  open: 'Открыт',
+  in_progress: 'В работе',
+  completed: 'Завершён',
+  cancelled: 'Отменён',
+};

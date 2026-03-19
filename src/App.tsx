@@ -1,25 +1,74 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Index from "./pages/Index.tsx";
-import NotFound from "./pages/NotFound.tsx";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
+import Index from "./pages/Index";
+import AuthPage from "./pages/AuthPage";
+import RoleSelection from "./pages/RoleSelection";
+import MasterSetup from "./pages/MasterSetup";
+import CreateTask from "./pages/CreateTask";
+import MyResponses from "./pages/MyResponses";
+import ProfilePage from "./pages/ProfilePage";
+import { AppLayout } from "./components/AppLayout";
+import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+
+function AppRoutes() {
+  const { user, profile, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Routes>
+        <Route path="*" element={<AuthPage />} />
+      </Routes>
+    );
+  }
+
+  // New user without a name set — show role selection
+  if (profile && !profile.name) {
+    return (
+      <Routes>
+        <Route path="/role-selection" element={<RoleSelection />} />
+        <Route path="/master-setup" element={<MasterSetup />} />
+        <Route path="*" element={<Navigate to="/role-selection" replace />} />
+      </Routes>
+    );
+  }
+
+  return (
+    <Routes>
+      <Route path="/" element={<Index />} />
+      <Route path="/role-selection" element={<RoleSelection />} />
+      <Route path="/master-setup" element={<MasterSetup />} />
+      <Route path="/create-task" element={<AppLayout><CreateTask /></AppLayout>} />
+      <Route path="/my-responses" element={<AppLayout><MyResponses /></AppLayout>} />
+      <Route path="/profile" element={<AppLayout><ProfilePage /></AppLayout>} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <AuthProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
