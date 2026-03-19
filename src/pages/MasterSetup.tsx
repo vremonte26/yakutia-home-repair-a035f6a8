@@ -42,6 +42,9 @@ export default function MasterSetup() {
       return;
     }
     setLoading(true);
+
+    const bypassModeration = import.meta.env.VITE_BYPASS_MODERATION === 'true';
+
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -50,7 +53,7 @@ export default function MasterSetup() {
         work_area: workArea,
         about,
         phone: phone || undefined,
-        is_verified: false,
+        is_verified: bypassModeration ? true : false,
       })
       .eq('id', user.id);
     setLoading(false);
@@ -59,7 +62,12 @@ export default function MasterSetup() {
       return;
     }
     await refreshProfile();
-    navigate('/moderation-pending');
+    if (bypassModeration) {
+      toast({ title: 'Вы теперь мастер!' });
+      navigate('/');
+    } else {
+      navigate('/moderation-pending');
+    }
   };
 
   return (
