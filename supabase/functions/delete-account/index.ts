@@ -22,7 +22,6 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Verify the user with their JWT
     const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -35,26 +34,23 @@ Deno.serve(async (req) => {
     }
 
     const userId = user.id;
-
-    // Use service role to delete all user data and auth account
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Delete in order respecting foreign keys
-    await adminClient.from("complaints").delete().or(`from_user.eq.${userId},to_user.eq.${userId}`);
-    await adminClient.from("reviews").delete().or(`from_user.eq.${userId},to_user.eq.${userId}`);
-    await adminClient.from("responses").delete().eq("master_id", userId);
-    
-    // Delete responses to user's tasks
-    const { data: userTasks } = await adminClient.from("tasks").select("id").eq("client_id", userId);
-    if (userTasks && userTasks.length > 0) {
-      const taskIds = userTasks.map((t) => t.id);
-      await adminClient.from("responses").delete().in("task_id", taskIds);
-    }
-    
-    await adminClient.from("tasks").delete().eq("client_id", userId);
-    await adminClient.from("profiles").delete().eq("id", userId);
+    // Anonymize profile instead of deleting — keeps FK references intact
+    await adminClient.from("profiles").update({
+      name: "Пользователь удалён",
+      phone: null,
+      photo: null,
+      about: null,
+      categories: [],
+      work_area: null,
+      role: "client",
+      is_active: false,
+      is_verified: null,
+      rating: 0,
+    }).eq("id", userId);
 
-    // Delete the auth user (also unlinks all OAuth identities)
+    // Delete the auth user (frees phone/email for re-registration, unlinks OAuth)
     const { error: deleteError } = await adminClient.auth.admin.deleteUser(userId);
     if (deleteError) {
       return new Response(JSON.stringify({ error: deleteError.message }), {
