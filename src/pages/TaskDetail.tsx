@@ -7,8 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CategoryBadge } from '@/components/CategoryBadge';
+import { UserRating } from '@/components/UserRating';
+import { ReviewForm } from '@/components/ReviewForm';
 import { TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constants';
-import { MapPin, Clock, Star, ArrowLeft, User, CheckCircle, XCircle } from 'lucide-react';
+import { MapPin, Clock, ArrowLeft, User, CheckCircle, XCircle, Check } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
@@ -36,11 +38,14 @@ export default function TaskDetail() {
   const [responses, setResponses] = useState<ResponseWithMaster[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [reviewCounts, setReviewCounts] = useState<Record<string, number>>({});
+  const [myReviews, setMyReviews] = useState<Set<string>>(new Set()); // set of to_user ids I already reviewed for this task
 
   const isOwner = task?.client_id === user?.id;
+  const isMaster = profile?.role === 'master';
 
   const fetchData = async () => {
-    if (!id) return;
+    if (!id || !user) return;
 
     const { data: taskData } = await supabase
       .from('tasks')
@@ -58,6 +63,28 @@ export default function TaskDetail() {
         .order('created_at', { ascending: true });
 
       setResponses((responsesData as any) ?? []);
+
+      // Fetch review counts for each master
+      const masterIds = (responsesData ?? []).map((r: any) => r.master_id);
+      if (masterIds.length > 0) {
+        const { data: counts } = await supabase
+          .from('reviews')
+          .select('to_user')
+          .in('to_user', masterIds);
+        const countMap: Record<string, number> = {};
+        (counts ?? []).forEach((c: any) => {
+          countMap[c.to_user] = (countMap[c.to_user] || 0) + 1;
+        });
+        setReviewCounts(countMap);
+      }
+
+      // Fetch my existing reviews for this task
+      const { data: existingReviews } = await supabase
+        .from('reviews')
+        .select('to_user')
+        .eq('from_user', user.id)
+        .eq('task_id', id);
+      setMyReviews(new Set((existingReviews ?? []).map((r: any) => r.to_user)));
     }
 
     setLoading(false);
@@ -65,21 +92,13 @@ export default function TaskDetail() {
 
   useEffect(() => {
     fetchData();
-  }, [id]);
+  }, [id, user]);
 
   const acceptMaster = async (responseId: string) => {
     setActionLoading(responseId);
     try {
-      await supabase
-        .from('responses')
-        .update({ status: 'accepted' })
-        .eq('id', responseId);
-
-      await supabase
-        .from('tasks')
-        .update({ status: 'in_progress' })
-        .eq('id', id);
-
+      await supabase.from('responses').update({ status: 'accepted' }).eq('id', responseId);
+      await supabase.from('tasks').update({ status: 'in_progress' }).eq('id', id);
       toast({ title: 'Мастер выбран!' });
       await fetchData();
     } catch (e: any) {
@@ -91,19 +110,21 @@ export default function TaskDetail() {
   const cancelMaster = async (responseId: string) => {
     setActionLoading(responseId);
     try {
-      // Reject (block) this master for this task
-      await supabase
-        .from('responses')
-        .update({ status: 'rejected' })
-        .eq('id', responseId);
-
-      // Revert task to open so client can pick from reserve
-      await supabase
-        .from('tasks')
-        .update({ status: 'open' })
-        .eq('id', id);
-
+      await supabase.from('responses').update({ status: 'rejected' }).eq('id', responseId);
+      await supabase.from('tasks').update({ status: 'open' }).eq('id', id);
       toast({ title: 'Мастер отменён. Выберите другого из резерва.' });
+      await fetchData();
+    } catch (e: any) {
+      toast({ title: 'Ошибка', description: e.message, variant: 'destructive' });
+    }
+    setActionLoading(null);
+  };
+
+  const completeTask = async () => {
+    setActionLoading('complete');
+    try {
+      await supabase.from('tasks').update({ status: 'completed' }).eq('id', id);
+      toast({ title: 'Заказ завершён!' });
       await fetchData();
     } catch (e: any) {
       toast({ title: 'Ошибка', description: e.message, variant: 'destructive' });
@@ -130,6 +151,11 @@ export default function TaskDetail() {
 
   const acceptedResponse = responses.find(r => r.status === 'accepted');
   const pendingResponses = responses.filter(r => r.status === 'pending');
+  const isCompleted = task.status === 'completed';
+
+  // Determine who the current user can review
+  const canReviewMaster = isOwner && isCompleted && acceptedResponse && !myReviews.has(acceptedResponse.master_id);
+  const canReviewClient = isMaster && isCompleted && task.client_id && !myReviews.has(task.client_id);
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -160,9 +186,21 @@ export default function TaskDetail() {
               {formatDistanceToNow(new Date(task.created_at), { addSuffix: true, locale: ru })}
             </span>
           </div>
+
+          {/* Complete button for client */}
+          {isOwner && task.status === 'in_progress' && acceptedResponse && (
+            <Button
+              className="w-full gap-1"
+              onClick={completeTask}
+              disabled={actionLoading === 'complete'}
+            >
+              <Check className="h-4 w-4" /> Завершить заказ
+            </Button>
+          )}
         </CardContent>
       </Card>
 
+      {/* Responses section for task owner */}
       {isOwner && (
         <div className="space-y-3">
           <h2 className="text-base font-bold">
@@ -174,8 +212,9 @@ export default function TaskDetail() {
               <p className="text-xs font-semibold text-primary uppercase tracking-wide">Выбранный мастер</p>
               <MasterCard
                 response={acceptedResponse}
+                reviewCount={reviewCounts[acceptedResponse.master_id] || 0}
                 isAccepted
-                onCancel={() => cancelMaster(acceptedResponse.id)}
+                onCancel={!isCompleted ? () => cancelMaster(acceptedResponse.id) : undefined}
                 loading={actionLoading === acceptedResponse.id}
               />
             </div>
@@ -190,6 +229,7 @@ export default function TaskDetail() {
                 <MasterCard
                   key={r.id}
                   response={r}
+                  reviewCount={reviewCounts[r.master_id] || 0}
                   canAccept={!acceptedResponse && task.status === 'open'}
                   onAccept={() => acceptMaster(r.id)}
                   loading={actionLoading === r.id}
@@ -203,12 +243,34 @@ export default function TaskDetail() {
           )}
         </div>
       )}
+
+      {/* Review section */}
+      {canReviewMaster && acceptedResponse?.profiles && (
+        <ReviewForm
+          fromUserId={user!.id}
+          toUserId={acceptedResponse.master_id}
+          taskId={task.id}
+          toUserName={acceptedResponse.profiles.name}
+          onReviewSubmitted={fetchData}
+        />
+      )}
+
+      {canReviewClient && (
+        <ReviewForm
+          fromUserId={user!.id}
+          toUserId={task.client_id}
+          taskId={task.id}
+          toUserName="клиента"
+          onReviewSubmitted={fetchData}
+        />
+      )}
     </div>
   );
 }
 
 function MasterCard({
   response,
+  reviewCount,
   isAccepted,
   canAccept,
   onAccept,
@@ -216,6 +278,7 @@ function MasterCard({
   loading,
 }: {
   response: ResponseWithMaster;
+  reviewCount: number;
   isAccepted?: boolean;
   canAccept?: boolean;
   onAccept?: () => void;
@@ -239,10 +302,7 @@ function MasterCard({
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm truncate">{master.name}</p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="flex items-center gap-0.5">
-                <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                {master.rating?.toFixed(1) ?? '—'}
-              </span>
+              <UserRating rating={master.rating} reviewCount={reviewCount} size="sm" />
               <span>
                 {formatDistanceToNow(new Date(response.created_at), { addSuffix: true, locale: ru })}
               </span>
