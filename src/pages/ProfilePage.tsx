@@ -52,7 +52,7 @@ export default function ProfilePage() {
             <div className="space-y-1">
               <h3 className="font-bold text-base">Анкета на проверке</h3>
               <p className="text-muted-foreground text-sm">
-                Ваша анкета на проверке. Обычно это занимает до 24 часов. Мы сообщим, когда всё готово.
+                Ваша анкета на проверке. Обычно это занимает до 24 часов. Мы сообщим, когда всё будет готово.
               </p>
             </div>
             <Button variant="outline" className="w-full" onClick={() => setShowPendingNotice(false)}>
