@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { CATEGORIES } from '@/lib/constants';
+import { TaskMap } from '@/components/TaskMap';
 
 export default function MasterDashboard() {
   const { user, profile } = useAuth();
@@ -105,6 +106,8 @@ export default function MasterDashboard() {
   return (
     <div className="space-y-4 animate-fade-in">
       <h1 className="text-xl font-extrabold">Доступные заказы</h1>
+
+      <TaskMap mode="master" />
 
       <div className="flex gap-2 overflow-x-auto pb-1">
         <Badge
