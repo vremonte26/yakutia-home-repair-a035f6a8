@@ -329,8 +329,11 @@ export function TaskMap({ mode }: TaskMapProps) {
 
   if (error) {
     return (
-      <div className="w-full rounded-xl border bg-muted/50 flex items-center justify-center text-sm text-muted-foreground" style={{ height: 400 }}>
-        Не удалось загрузить карту: {error}
+      <div className="w-full rounded-xl border bg-muted/50 flex flex-col items-center justify-center gap-3 text-sm text-muted-foreground" style={{ height: 400 }}>
+        <p>{error}</p>
+        <Button size="sm" variant="outline" onClick={() => { setError(null); setCenter(prev => prev ? { ...prev } : prev); }}>
+          Попробовать снова
+        </Button>
       </div>
     );
   }
