@@ -5,6 +5,7 @@ import { TaskCard } from '@/components/TaskCard';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { TaskMap } from '@/components/TaskMap';
 
 export default function ClientDashboard() {
   const { user } = useAuth();
