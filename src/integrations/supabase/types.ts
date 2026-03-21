@@ -70,6 +70,7 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          is_photo_moderated: boolean
           is_verified: boolean | null
           name: string
           phone: string | null
@@ -85,6 +86,7 @@ export type Database = {
           created_at?: string
           id: string
           is_active?: boolean
+          is_photo_moderated?: boolean
           is_verified?: boolean | null
           name?: string
           phone?: string | null
@@ -100,6 +102,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          is_photo_moderated?: boolean
           is_verified?: boolean | null
           name?: string
           phone?: string | null

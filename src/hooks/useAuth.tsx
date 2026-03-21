@@ -14,6 +14,7 @@ export interface Profile {
   is_active: boolean;
   is_verified: boolean | null;
   rating: number | null;
+  is_photo_moderated: boolean;
 }
 
 interface AuthContextType {

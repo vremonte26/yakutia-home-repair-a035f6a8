@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CATEGORIES, WORK_AREAS } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Camera, X } from 'lucide-react';
 
 export default function MasterSetup() {
   const { user, profile, refreshProfile } = useAuth();
@@ -22,6 +22,9 @@ export default function MasterSetup() {
   const [phone, setPhone] = useState('');
   const [name, setName] = useState(profile?.name || '');
   const [loading, setLoading] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const toggleCategory = (val: string) => {
     setCategories(prev =>
@@ -29,11 +32,36 @@ export default function MasterSetup() {
     );
   };
 
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Выберите изображение', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: 'Максимальный размер — 2 МБ', variant: 'destructive' });
+      return;
+    }
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
+  const removePhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     if (!name.trim()) {
       toast({ title: 'Введите имя', variant: 'destructive' });
+      return;
+    }
+    if (!photoFile) {
+      toast({ title: 'Загрузите фото', variant: 'destructive' });
       return;
     }
     if (categories.length === 0) {
@@ -46,31 +74,50 @@ export default function MasterSetup() {
     }
     setLoading(true);
 
-    const bypassModeration = import.meta.env.VITE_BYPASS_MODERATION === 'true';
+    try {
+      // Upload photo
+      const ext = photoFile.name.split('.').pop();
+      const filePath = `${user.id}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, photoFile, { upsert: true });
+      if (uploadError) throw uploadError;
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        name: name.trim(),
-        role: 'master' as const,
-        categories,
-        work_area: workArea,
-        about,
-        phone: phone || undefined,
-        is_verified: bypassModeration ? true : false,
-      })
-      .eq('id', user.id);
-    setLoading(false);
-    if (error) {
-      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
-      return;
-    }
-    await refreshProfile();
-    if (bypassModeration) {
-      toast({ title: 'Вы теперь мастер!' });
-      navigate('/');
-    } else {
-      navigate('/moderation-pending');
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+      const photoUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
+      const bypassModeration = import.meta.env.VITE_BYPASS_MODERATION === 'true';
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: name.trim(),
+          role: 'master' as const,
+          categories,
+          work_area: workArea,
+          about,
+          phone: phone || undefined,
+          photo: photoUrl,
+          is_verified: bypassModeration ? true : false,
+          is_photo_moderated: bypassModeration ? true : false,
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      await refreshProfile();
+      if (bypassModeration) {
+        toast({ title: 'Вы теперь мастер!' });
+        navigate('/');
+      } else {
+        navigate('/moderation-pending');
+      }
+    } catch (err: any) {
+      toast({ title: 'Ошибка', description: err.message, variant: 'destructive' });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -91,6 +138,44 @@ export default function MasterSetup() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Фото <span className="text-destructive">*</span></label>
+              <div className="flex items-center gap-4">
+                {photoPreview ? (
+                  <div className="relative group">
+                    <img
+                      src={photoPreview}
+                      alt="Превью"
+                      className="w-20 h-20 rounded-2xl object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={removePhoto}
+                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-20 h-20 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                  >
+                    <Camera className="h-6 w-6" />
+                    <span className="text-xs">Загрузить</span>
+                  </button>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePhotoSelect}
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium">Ваше имя</label>
               <Input
