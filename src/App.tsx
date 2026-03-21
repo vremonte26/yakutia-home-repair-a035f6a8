@@ -14,6 +14,7 @@ import MyResponses from "./pages/MyResponses";
 import ProfilePage from "./pages/ProfilePage";
 import { AppLayout } from "./components/AppLayout";
 import TaskDetail from "./pages/TaskDetail";
+import MapPage from "./pages/MapPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,6 +58,7 @@ function AppRoutes() {
       <Route path="/master-setup" element={<MasterSetup />} />
       <Route path="/moderation-pending" element={<ModerationPending />} />
       <Route path="/create-task" element={<AppLayout><CreateTask /></AppLayout>} />
+      <Route path="/map" element={<MapPage />} />
       <Route path="/my-responses" element={<AppLayout><MyResponses /></AppLayout>} />
       <Route path="/task/:id" element={<AppLayout><TaskDetail /></AppLayout>} />
       <Route path="/profile" element={<AppLayout><ProfilePage /></AppLayout>} />

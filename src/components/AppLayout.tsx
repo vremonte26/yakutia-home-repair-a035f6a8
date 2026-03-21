@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, PlusCircle, User, Wrench, ClipboardList } from 'lucide-react';
+import { Home, PlusCircle, User, Wrench, ClipboardList, Map } from 'lucide-react';
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { profile } = useAuth();
@@ -11,8 +11,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   const navItems = isMaster
     ? [
-        { to: '/', icon: ClipboardList, label: 'Заказы' },
-        { to: '/my-responses', icon: Wrench, label: 'Мои отклики' },
+        { to: '/', icon: ClipboardList, label: 'Лента' },
+        { to: '/map', icon: Map, label: 'Карта' },
+        { to: '/my-responses', icon: Wrench, label: 'Отклики' },
         { to: '/profile', icon: User, label: 'Профиль' },
       ]
     : [
