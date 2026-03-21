@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { MapPin, Navigation } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 declare global {
   interface Window {
@@ -20,6 +23,21 @@ interface TaskMapProps {
   mode: 'master' | 'client';
 }
 
+const AREAS: { label: string; lat: number; lng: number }[] = [
+  { label: 'Якутск — центр', lat: 62.0355, lng: 129.6755 },
+  { label: 'Якутск — Залог', lat: 62.0150, lng: 129.6800 },
+  { label: 'Якутск — ДСК', lat: 62.0560, lng: 129.7300 },
+  { label: 'Якутск — Сайсары', lat: 62.0280, lng: 129.7100 },
+  { label: 'Якутск — Птицефабрика', lat: 62.0750, lng: 129.6200 },
+  { label: 'Якутск — Марха', lat: 62.0900, lng: 129.5500 },
+  { label: 'Якутск — Жатай', lat: 62.1500, lng: 129.8200 },
+  { label: 'Якутск — Гагарина', lat: 62.0400, lng: 129.7200 },
+  { label: 'Якутск — Строительный', lat: 62.0480, lng: 129.6400 },
+  { label: 'Нерюнгри', lat: 56.6574, lng: 124.7131 },
+  { label: 'Мирный', lat: 62.5354, lng: 113.9610 },
+  { label: 'Алдан', lat: 58.6077, lng: 125.3891 },
+];
+
 function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -30,42 +48,92 @@ function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Add random offset (~1-2 km) to hide exact address
 function obfuscateCoords(lat: number, lng: number): [number, number] {
   const offsetLat = (Math.random() - 0.5) * 0.03;
   const offsetLng = (Math.random() - 0.5) * 0.03;
   return [lat + offsetLat, lng + offsetLng];
 }
 
+type GeoState = 'asking' | 'denied' | 'granted' | 'error';
+
 export function TaskMap({ mode }: TaskMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [geoState, setGeoState] = useState<GeoState>('asking');
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [showUserPin, setShowUserPin] = useState(false);
 
+  // Request geolocation
+  const requestGeolocation = useCallback(() => {
+    setLoading(true);
+    setGeoError(null);
+    console.log('[TaskMap] Запрос геолокации...');
+
+    if (!navigator.geolocation) {
+      console.error('[TaskMap] Геолокация недоступна в браузере');
+      setGeoState('error');
+      setGeoError('Геолокация недоступна в вашем браузере или устройстве');
+      setLoading(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        console.log(`[TaskMap] Геолокация получена: ${lat}, ${lng}`);
+        setCenter({ lat, lng });
+        setShowUserPin(true);
+        setGeoState('granted');
+        setLoading(false);
+      },
+      (err) => {
+        console.error('[TaskMap] Ошибка геолокации:', err.message, 'code:', err.code);
+        setLoading(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          setGeoState('denied');
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          setGeoState('error');
+          setGeoError('Геолокация недоступна. Проверьте, включена ли она в настройках устройства.');
+        } else if (err.code === err.TIMEOUT) {
+          setGeoState('error');
+          setGeoError('Не удалось определить местоположение — истекло время ожидания. Попробуйте ещё раз.');
+        } else {
+          setGeoState('error');
+          setGeoError('Не удалось определить местоположение.');
+        }
+      },
+      { enableHighAccuracy: false, timeout: 10000 }
+    );
+  }, []);
+
+  const selectArea = useCallback((areaLabel: string) => {
+    const area = AREAS.find(a => a.label === areaLabel);
+    if (area) {
+      console.log(`[TaskMap] Выбран район: ${area.label} (${area.lat}, ${area.lng})`);
+      setCenter({ lat: area.lat, lng: area.lng });
+      setShowUserPin(false);
+      setGeoState('granted');
+    }
+  }, []);
+
+  // Initialize map when center is set
   useEffect(() => {
-    if (!user) return;
+    if (!user || !center) return;
 
     let cancelled = false;
+    setLoading(true);
+    setError(null);
 
     const init = async () => {
       try {
-        // 1. Get user location
-        console.log('[TaskMap] Получение геолокации...');
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: false,
-            timeout: 10000,
-          });
-        });
-        const userLat = position.coords.latitude;
-        const userLng = position.coords.longitude;
-        setUserLocation({ lat: userLat, lng: userLng });
-        console.log(`[TaskMap] Геолокация: ${userLat}, ${userLng}`);
+        const { lat: userLat, lng: userLng } = center;
 
-        // 2. Get API key
+        // Get API key
         console.log('[TaskMap] Получение ключа...');
         const { data: sessionData } = await supabase.auth.getSession();
         const token = sessionData?.session?.access_token;
@@ -81,7 +149,7 @@ export function TaskMap({ mode }: TaskMapProps) {
 
         if (cancelled) return;
 
-        // 3. Load Yandex Maps script
+        // Load Yandex Maps script
         if (!document.querySelector('script[src*="api-maps.yandex.ru"]')) {
           console.log('[TaskMap] Загрузка скрипта...');
           await new Promise<void>((resolve, reject) => {
@@ -94,23 +162,19 @@ export function TaskMap({ mode }: TaskMapProps) {
             script.onerror = () => reject(new Error('Failed to load Yandex Maps script'));
             document.head.appendChild(script);
           });
-        } else {
-          console.log('[TaskMap] Скрипт уже загружен');
         }
 
         if (cancelled) return;
 
-        // 4. Wait for ymaps3.ready
         console.log('[TaskMap] Инициализация карты...');
         await window.ymaps3.ready;
 
         if (cancelled || !mapRef.current) return;
 
-        // 5. Fetch points
+        // Fetch points
         let points: MapPoint[] = [];
 
         if (mode === 'master') {
-          // Show tasks within 50km
           const { data: tasks } = await supabase
             .from('tasks')
             .select('id, title, lat, lng')
@@ -125,7 +189,6 @@ export function TaskMap({ mode }: TaskMapProps) {
               return { id: t.id, lat: oLat, lng: oLng, title: t.title, color: 'red' as const };
             });
         } else {
-          // Show verified masters nearby
           const { data: masters } = await supabase
             .from('profiles')
             .select('id, name, lat, lng')
@@ -137,17 +200,13 @@ export function TaskMap({ mode }: TaskMapProps) {
           points = (masters ?? [])
             .filter((m: any) => m.lat && m.lng && getDistanceKm(userLat, userLng, m.lat, m.lng) <= 50)
             .map((m: any) => ({
-              id: m.id,
-              lat: m.lat,
-              lng: m.lng,
-              title: m.name,
-              color: 'green' as const,
+              id: m.id, lat: m.lat, lng: m.lng, title: m.name, color: 'green' as const,
             }));
         }
 
         console.log(`[TaskMap] Найдено ${points.length} точек`);
 
-        // 6. Create map
+        // Create map
         const { YMap, YMapDefaultSchemeLayer, YMapDefaultFeaturesLayer, YMapMarker } = window.ymaps3;
 
         const map = new YMap(mapRef.current, {
@@ -157,12 +216,13 @@ export function TaskMap({ mode }: TaskMapProps) {
         map.addChild(new YMapDefaultSchemeLayer({}));
         map.addChild(new YMapDefaultFeaturesLayer({}));
 
-        // User location marker
-        const userEl = document.createElement('div');
-        userEl.style.cssText = 'width:16px;height:16px;border-radius:50%;background:#3b82f6;border:3px solid white;box-shadow:0 0 6px rgba(59,130,246,0.5);';
-        map.addChild(new YMapMarker({ coordinates: [userLng, userLat] }, userEl));
+        // User location pin (only if real geolocation)
+        if (showUserPin) {
+          const userEl = document.createElement('div');
+          userEl.style.cssText = 'width:16px;height:16px;border-radius:50%;background:#3b82f6;border:3px solid white;box-shadow:0 0 6px rgba(59,130,246,0.5);';
+          map.addChild(new YMapMarker({ coordinates: [userLng, userLat] }, userEl));
+        }
 
-        // Task/master markers
         points.forEach(p => {
           const el = document.createElement('div');
           el.style.cssText = `width:12px;height:12px;border-radius:50%;background:${p.color === 'green' ? '#22c55e' : '#ef4444'};border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.3);cursor:pointer;`;
@@ -189,7 +249,53 @@ export function TaskMap({ mode }: TaskMapProps) {
         mapInstanceRef.current = null;
       }
     };
-  }, [user, mode]);
+  }, [user, mode, center, showUserPin]);
+
+  // Permission prompt
+  if (geoState === 'asking') {
+    return (
+      <div className="w-full rounded-xl border bg-card flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ height: 400 }}>
+        <Navigation className="h-10 w-10 text-primary" />
+        <div>
+          <p className="font-semibold text-base">Приложение «Времонте» хочет получить доступ к вашему местоположению</p>
+          <p className="text-sm text-muted-foreground mt-1">Чтобы показать заказы и мастеров рядом с вами</p>
+        </div>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={() => setGeoState('denied')}>Запретить</Button>
+          <Button onClick={requestGeolocation}>Разрешить</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Denied / Error — manual area selection
+  if (geoState === 'denied' || geoState === 'error') {
+    return (
+      <div className="w-full rounded-xl border bg-card flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ height: 400 }}>
+        <MapPin className="h-10 w-10 text-muted-foreground" />
+        <div>
+          {geoState === 'denied' ? (
+            <p className="text-sm text-muted-foreground">Без геолокации карта не может показать заказы рядом. Вы можете выбрать район вручную</p>
+          ) : (
+            <p className="text-sm text-destructive">{geoError}</p>
+          )}
+        </div>
+        <Select onValueChange={selectArea}>
+          <SelectTrigger className="w-64">
+            <SelectValue placeholder="Выберите район" />
+          </SelectTrigger>
+          <SelectContent>
+            {AREAS.map(a => (
+              <SelectItem key={a.label} value={a.label}>{a.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button variant="ghost" size="sm" onClick={requestGeolocation}>
+          Попробовать геолокацию снова
+        </Button>
+      </div>
+    );
+  }
 
   if (error) {
     return (
