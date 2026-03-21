@@ -17,7 +17,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
         { to: '/profile', icon: User, label: 'Профиль' },
       ]
     : [
-        { to: '/', icon: Home, label: 'Главная' },
+        { to: '/', icon: Home, label: 'Лента' },
+        { to: '/map', icon: Map, label: 'Карта' },
         { to: '/create-task', icon: PlusCircle, label: 'Создать' },
         { to: '/profile', icon: User, label: 'Профиль' },
       ];

@@ -5,7 +5,6 @@ import { TaskCard } from '@/components/TaskCard';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { TaskMap } from '@/components/TaskMap';
 
 export default function ClientDashboard() {
   const { user } = useAuth();
@@ -55,7 +54,7 @@ export default function ClientDashboard() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <TaskMap mode="client" />
+      
 
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-extrabold">Мои заказы</h1>
