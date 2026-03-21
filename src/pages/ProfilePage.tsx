@@ -216,14 +216,16 @@ export default function ProfilePage() {
                   {profile.name?.[0]?.toUpperCase() || '?'}
                 </div>
               )}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingPhoto}
-                className="absolute inset-0 rounded-2xl bg-foreground/0 hover:bg-foreground/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-              >
-                <Camera className="h-5 w-5 text-background" />
-              </button>
+              {!profile.is_photo_moderated && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingPhoto}
+                  className="absolute inset-0 rounded-2xl bg-foreground/0 hover:bg-foreground/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                >
+                  <Camera className="h-5 w-5 text-background" />
+                </button>
+              )}
               <input
                 ref={fileInputRef}
                 type="file"
