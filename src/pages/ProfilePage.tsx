@@ -84,6 +84,11 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
+    if (profile?.is_photo_moderated) {
+      toast({ title: 'Фото можно изменить только через повторную модерацию. Обратитесь в поддержку.', variant: 'destructive' });
+      return;
+    }
+
     if (!file.type.startsWith('image/')) {
       toast({ title: 'Выберите изображение', variant: 'destructive' });
       return;
