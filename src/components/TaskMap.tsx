@@ -259,8 +259,13 @@ export function TaskMap({ mode }: TaskMapProps) {
         console.log('[TaskMap] Карта создана успешно');
         setLoading(false);
       } catch (err: any) {
-        console.error('[TaskMap] Ошибка:', err.message);
-        setError(err.message);
+        const msg = err.message;
+        console.error('[TaskMap] Ошибка:', msg);
+        if (msg === 'TIMEOUT' || msg === 'SCRIPT_LOAD_FAILED') {
+          setError('Не удалось загрузить карту. Проверьте интернет и обновите страницу.');
+        } else {
+          setError(msg);
+        }
         setLoading(false);
       }
     };
