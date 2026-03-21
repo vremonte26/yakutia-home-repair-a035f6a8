@@ -58,6 +58,7 @@ function AppRoutes() {
       <Route path="/master-setup" element={<MasterSetup />} />
       <Route path="/moderation-pending" element={<ModerationPending />} />
       <Route path="/create-task" element={<AppLayout><CreateTask /></AppLayout>} />
+      <Route path="/map" element={<MapPage />} />
       <Route path="/my-responses" element={<AppLayout><MyResponses /></AppLayout>} />
       <Route path="/task/:id" element={<AppLayout><TaskDetail /></AppLayout>} />
       <Route path="/profile" element={<AppLayout><ProfilePage /></AppLayout>} />

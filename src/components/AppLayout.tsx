@@ -11,8 +11,9 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   const navItems = isMaster
     ? [
-        { to: '/', icon: ClipboardList, label: 'Заказы' },
-        { to: '/my-responses', icon: Wrench, label: 'Мои отклики' },
+        { to: '/', icon: ClipboardList, label: 'Лента' },
+        { to: '/map', icon: Map, label: 'Карта' },
+        { to: '/my-responses', icon: Wrench, label: 'Отклики' },
         { to: '/profile', icon: User, label: 'Профиль' },
       ]
     : [

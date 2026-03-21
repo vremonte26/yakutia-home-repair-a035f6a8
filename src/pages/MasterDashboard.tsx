@@ -107,8 +107,6 @@ export default function MasterDashboard() {
     <div className="space-y-4 animate-fade-in">
       <h1 className="text-xl font-extrabold">Доступные заказы</h1>
 
-      <TaskMap mode="master" />
-
       <div className="flex gap-2 overflow-x-auto pb-1">
         <Badge
           variant={filter === null ? 'default' : 'outline'}
