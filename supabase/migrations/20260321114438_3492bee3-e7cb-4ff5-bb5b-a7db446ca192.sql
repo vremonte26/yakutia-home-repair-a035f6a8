@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN is_photo_moderated boolean NOT NULL DEFAULT false;
