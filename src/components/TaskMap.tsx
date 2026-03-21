@@ -149,19 +149,44 @@ export function TaskMap({ mode }: TaskMapProps) {
 
         if (cancelled) return;
 
-        // Load Yandex Maps script
-        if (!document.querySelector('script[src*="api-maps.yandex.ru"]')) {
+        // Load Yandex Maps script with timeout and retry
+        if (!window.ymaps3) {
           console.log('[TaskMap] Загрузка скрипта...');
-          await new Promise<void>((resolve, reject) => {
+          document.querySelectorAll('script[src*="api-maps.yandex.ru"]').forEach(s => s.remove());
+
+          const loadScript = () => new Promise<void>((resolve, reject) => {
             const script = document.createElement('script');
             script.src = `https://api-maps.yandex.ru/v3/?apikey=${apiKey}&lang=ru_RU`;
+            script.async = true;
+            script.defer = true;
+
+            const timeout = setTimeout(() => {
+              script.onload = null;
+              script.onerror = null;
+              script.remove();
+              reject(new Error('TIMEOUT'));
+            }, 5000);
+
             script.onload = () => {
+              clearTimeout(timeout);
               console.log('[TaskMap] Скрипт загружен');
               resolve();
             };
-            script.onerror = () => reject(new Error('Failed to load Yandex Maps script'));
+            script.onerror = () => {
+              clearTimeout(timeout);
+              script.remove();
+              reject(new Error('SCRIPT_LOAD_FAILED'));
+            };
             document.head.appendChild(script);
           });
+
+          try {
+            await loadScript();
+          } catch (firstErr) {
+            console.warn('[TaskMap] Первая попытка не удалась, повтор...', (firstErr as Error).message);
+            if (cancelled) return;
+            await loadScript();
+          }
         }
 
         if (cancelled) return;
