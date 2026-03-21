@@ -55,6 +55,8 @@ export default function ClientDashboard() {
 
   return (
     <div className="space-y-4 animate-fade-in">
+      <TaskMap mode="client" />
+
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-extrabold">Мои заказы</h1>
         <Button asChild size="sm">
