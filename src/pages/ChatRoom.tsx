@@ -157,17 +157,21 @@ export default function ChatRoom() {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `task_id=eq.${taskId}` },
-        (payload) => {
+        async (payload) => {
           const newMsg = payload.new as Message;
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
+          // Resolve signed URL for new image message
+          if (newMsg.image_url && !newMsg.image_url.startsWith('http')) {
+            await resolveSignedUrls([newMsg]);
+          }
         }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [taskId, user]);
+  }, [taskId, user, resolveSignedUrls]);
 
   useEffect(() => {
     if (!taskId || !user) return;
