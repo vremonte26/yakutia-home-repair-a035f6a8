@@ -58,6 +58,33 @@ export default function MasterDashboard() {
           counts[r.task_id] = (counts[r.task_id] || 0) + 1;
         });
         setResponseCounts(counts);
+
+        // Fetch client profiles
+        const clientIds = [...new Set(tasksData.map((t: any) => t.client_id))];
+        if (clientIds.length > 0) {
+          const { data: profiles } = await supabase
+            .from('profiles')
+            .select('id, name, rating')
+            .in('id', clientIds);
+
+          const profileMap: Record<string, { name: string; rating: number | null }> = {};
+          (profiles ?? []).forEach((p: any) => {
+            profileMap[p.id] = { name: p.name, rating: p.rating };
+          });
+          setClientProfiles(profileMap);
+
+          // Fetch review counts for clients
+          const { data: reviewData } = await supabase
+            .from('reviews')
+            .select('to_user')
+            .in('to_user', clientIds);
+
+          const rcounts: Record<string, number> = {};
+          (reviewData ?? []).forEach((r: any) => {
+            rcounts[r.to_user] = (rcounts[r.to_user] || 0) + 1;
+          });
+          setClientReviewCounts(rcounts);
+        }
       }
 
       setLoading(false);
