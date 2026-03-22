@@ -26,6 +26,7 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive'> = 
 export default function MyResponses() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [responses, setResponses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
