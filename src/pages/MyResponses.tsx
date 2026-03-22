@@ -108,8 +108,18 @@ export default function MyResponses() {
                 )}
 
                 {r.status === 'accepted' && (
-                  <p className="text-xs text-muted-foreground italic">
-                    Вы выбраны исполнителем. Свяжитесь с клиентом через чат.
+                  <Button
+                    size="sm"
+                    className="gap-1 mt-1"
+                    onClick={() => navigate(`/chat/${r.task_id}`)}
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" /> Написать
+                  </Button>
+                )}
+
+                {r.status === 'pending' && (
+                  <p className="text-xs text-muted-foreground italic mt-1">
+                    Вы в резерве. Когда клиент выберет вас, здесь появится чат.
                   </p>
                 )}
               </CardContent>
