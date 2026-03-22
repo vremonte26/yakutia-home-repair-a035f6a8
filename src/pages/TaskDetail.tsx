@@ -213,7 +213,7 @@ export default function TaskDetail() {
           {isOwner && task.status === 'in_progress' && acceptedResponse && (
             <Button
               className="w-full gap-1"
-              onClick={completeTask}
+              onClick={() => setConfirmAction({ label: 'завершить заказ', action: completeTask })}
               disabled={actionLoading === 'complete'}
             >
               <Check className="h-4 w-4" /> Завершить заказ
