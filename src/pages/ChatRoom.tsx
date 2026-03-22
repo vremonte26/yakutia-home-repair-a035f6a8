@@ -26,6 +26,7 @@ export default function ChatRoom() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [newMessage, setNewMessage] = useState('');
   const [otherUser, setOtherUser] = useState<{ id: string; name: string; photo: string | null } | null>(null);
   const [taskTitle, setTaskTitle] = useState('');
@@ -38,6 +39,35 @@ export default function ChatRoom() {
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const resolveSignedUrls = useCallback(async (msgs: Message[]) => {
+    const imageMsgs = msgs.filter(m => m.image_url && !m.image_url.startsWith('http'));
+    if (imageMsgs.length === 0) {
+      // Some old messages may already have full URLs
+      return;
+    }
+    const paths = imageMsgs.map(m => m.image_url!);
+    const { data } = await supabase.storage
+      .from('chat-images')
+      .createSignedUrls(paths, 3600); // 1 hour
+    if (data) {
+      const urlMap: Record<string, string> = {};
+      data.forEach(item => {
+        if (item.signedUrl) {
+          urlMap[item.path ?? ''] = item.signedUrl;
+        }
+      });
+      setSignedUrls(prev => ({ ...prev, ...urlMap }));
+    }
+  }, []);
+
+  const getImageUrl = useCallback((imageUrl: string | null) => {
+    if (!imageUrl) return null;
+    // Already a full URL (legacy or signed)
+    if (imageUrl.startsWith('http')) return imageUrl;
+    // Look up signed URL
+    return signedUrls[imageUrl] || null;
+  }, [signedUrls]);
+
   const fetchMessages = useCallback(async () => {
     if (!taskId) return;
     const { data: msgs } = await supabase
@@ -45,8 +75,10 @@ export default function ChatRoom() {
       .select('*')
       .eq('task_id', taskId)
       .order('created_at', { ascending: true });
-    setMessages((msgs as Message[]) ?? []);
-  }, [taskId]);
+    const result = (msgs as Message[]) ?? [];
+    setMessages(result);
+    await resolveSignedUrls(result);
+  }, [taskId, resolveSignedUrls]);
 
   useEffect(() => {
     if (!taskId || !user) return;
@@ -125,17 +157,21 @@ export default function ChatRoom() {
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'messages', filter: `task_id=eq.${taskId}` },
-        (payload) => {
+        async (payload) => {
           const newMsg = payload.new as Message;
           setMessages(prev => {
             if (prev.some(m => m.id === newMsg.id)) return prev;
             return [...prev, newMsg];
           });
+          // Resolve signed URL for new image message
+          if (newMsg.image_url && !newMsg.image_url.startsWith('http')) {
+            await resolveSignedUrls([newMsg]);
+          }
         }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [taskId, user]);
+  }, [taskId, user, resolveSignedUrls]);
 
   useEffect(() => {
     if (!taskId || !user) return;
@@ -158,6 +194,15 @@ export default function ChatRoom() {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [taskId, user, taskTitle, toast]);
+
+  // Auto-refresh signed URLs every 50 minutes
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const interval = setInterval(() => {
+      resolveSignedUrls(messages);
+    }, 50 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [messages, resolveSignedUrls]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -213,7 +258,8 @@ export default function ChatRoom() {
 
     setUploading(true);
     const ext = file.name.split('.').pop() || 'jpg';
-    const filePath = `${taskId}/${user.id}_${Date.now()}.${ext}`;
+    const rand = Math.random().toString(36).substring(2, 8);
+    const filePath = `${taskId}/${user.id}_${Date.now()}_${rand}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from('chat-images')
@@ -225,14 +271,12 @@ export default function ChatRoom() {
       return;
     }
 
-    const { data: urlData } = supabase.storage
-      .from('chat-images')
-      .getPublicUrl(filePath);
-
-    await sendMessage(null, urlData.publicUrl);
+    // Store the file path (not a public URL) — signed URLs are generated on display
+    await sendMessage(null, filePath);
+    // Pre-resolve the signed URL for immediate display
+    await resolveSignedUrls([{ image_url: filePath } as Message]);
     setUploading(false);
 
-    // Reset file input
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -307,6 +351,7 @@ export default function ChatRoom() {
         )}
         {messages.map(msg => {
           const isMine = msg.from_user === user?.id;
+          const resolvedImageUrl = getImageUrl(msg.image_url);
           return (
             <div key={msg.id} className={`flex items-end gap-2 ${isMine ? 'justify-end' : 'justify-start'}`}>
               {!isMine && (
@@ -328,13 +373,19 @@ export default function ChatRoom() {
                 <p className={`text-[10px] font-medium mb-0.5 ${isMine ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
                   {isMine ? 'Вы' : otherUser?.name ?? 'Собеседник'}
                 </p>
-                {msg.image_url && (
+                {msg.image_url && resolvedImageUrl && (
                   <img
-                    src={msg.image_url}
+                    src={resolvedImageUrl}
                     alt="Фото"
                     className="rounded-lg max-w-full max-h-52 object-cover mb-1 cursor-pointer"
-                    onClick={() => setFullscreenImage(msg.image_url)}
+                    onClick={() => setFullscreenImage(resolvedImageUrl)}
                   />
+                )}
+                {msg.image_url && !resolvedImageUrl && (
+                  <div className="flex items-center gap-2 py-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-xs">Загрузка фото...</span>
+                  </div>
                 )}
                 {msg.text && <p className="text-sm whitespace-pre-wrap break-words">{msg.text}</p>}
                 <p className={`text-[10px] mt-1 ${isMine ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
