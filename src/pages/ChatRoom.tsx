@@ -55,12 +55,15 @@ export default function ChatRoom() {
         .eq('id', taskId)
         .single();
 
-      if (!task || !['in_progress', 'completed'].includes(task.status)) {
+      if (!task) {
         navigate('/chats');
         return;
       }
 
       setTaskTitle(task.title);
+      setTaskStatus(task.status);
+      console.log('[Chat] Task status:', task.status);
+      console.log('[Chat] Current user ID:', user.id);
 
       const { data: resp } = await supabase
         .from('responses')
@@ -70,17 +73,35 @@ export default function ChatRoom() {
         .limit(1)
         .single();
 
+      const masterId = resp?.master_id ?? null;
+      console.log('[Chat] Accepted master ID:', masterId);
+
       if (!resp) {
+        console.log('[Chat] No accepted response found — chat read-only');
+        setCanWrite(false);
+        setLoading(false);
+        return;
+      }
+
+      const isParticipant = user.id === task.client_id || user.id === resp.master_id;
+      const isActive = task.status === 'in_progress';
+      const userCanWrite = isParticipant && isActive;
+      console.log('[Chat] Is participant:', isParticipant, '| Is active:', isActive, '| Can write:', userCanWrite);
+
+      if (!isParticipant) {
         navigate('/chats');
         return;
+      }
+
+      setCanWrite(userCanWrite);
+
+      if (userCanWrite) {
+        console.log('[Chat] ✅ Input field should be visible');
+      } else {
+        console.log('[Chat] ℹ️ Chat is read-only (status:', task.status, ')');
       }
 
       const otherId = task.client_id === user.id ? resp.master_id : task.client_id;
-
-      if (user.id !== task.client_id && user.id !== resp.master_id) {
-        navigate('/chats');
-        return;
-      }
 
       const { data: profile } = await supabase
         .from('profiles')
