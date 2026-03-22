@@ -1,10 +1,17 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CategoryBadge } from './CategoryBadge';
+import { UserRating } from './UserRating';
 import { TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constants';
-import { MapPin, Clock } from 'lucide-react';
+import { MapPin, Clock, User } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
+
+interface ClientInfo {
+  name: string;
+  rating: number | null;
+  reviewCount: number;
+}
 
 interface TaskCardProps {
   task: {
@@ -16,6 +23,7 @@ interface TaskCardProps {
     status: TaskStatus;
     created_at: string;
   };
+  clientInfo?: ClientInfo;
   onClick?: () => void;
   children?: React.ReactNode;
 }
@@ -27,7 +35,7 @@ const statusVariant: Record<TaskStatus, 'default' | 'secondary' | 'destructive' 
   cancelled: 'destructive',
 };
 
-export function TaskCard({ task, onClick, children }: TaskCardProps) {
+export function TaskCard({ task, clientInfo, onClick, children }: TaskCardProps) {
   return (
     <Card
       className="cursor-pointer hover:shadow-md transition-shadow animate-fade-in"
@@ -58,6 +66,13 @@ export function TaskCard({ task, onClick, children }: TaskCardProps) {
             {formatDistanceToNow(new Date(task.created_at), { addSuffix: true, locale: ru })}
           </span>
         </div>
+        {clientInfo && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <User className="h-3 w-3" />
+            <span>{clientInfo.name || 'Клиент'}</span>
+            <UserRating rating={clientInfo.rating} reviewCount={clientInfo.reviewCount} size="sm" showEmpty />
+          </div>
+        )}
         {children}
       </CardContent>
     </Card>
