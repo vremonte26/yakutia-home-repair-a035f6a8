@@ -10,7 +10,7 @@ import { CategoryBadge } from '@/components/CategoryBadge';
 import { UserRating } from '@/components/UserRating';
 import { ReviewForm } from '@/components/ReviewForm';
 import { TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constants';
-import { MapPin, Clock, ArrowLeft, User, CheckCircle, XCircle, Check } from 'lucide-react';
+import { MapPin, Clock, ArrowLeft, User, CheckCircle, XCircle, Check, MessageCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
