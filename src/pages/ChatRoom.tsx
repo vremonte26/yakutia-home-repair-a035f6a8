@@ -26,6 +26,8 @@ export default function ChatRoom() {
   const [newMessage, setNewMessage] = useState('');
   const [otherUser, setOtherUser] = useState<{ id: string; name: string; photo: string | null } | null>(null);
   const [taskTitle, setTaskTitle] = useState('');
+  const [taskStatus, setTaskStatus] = useState<string>('');
+  const [canWrite, setCanWrite] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,12 +55,15 @@ export default function ChatRoom() {
         .eq('id', taskId)
         .single();
 
-      if (!task || !['in_progress', 'completed'].includes(task.status)) {
+      if (!task) {
         navigate('/chats');
         return;
       }
 
       setTaskTitle(task.title);
+      setTaskStatus(task.status);
+      console.log('[Chat] Task status:', task.status);
+      console.log('[Chat] Current user ID:', user.id);
 
       const { data: resp } = await supabase
         .from('responses')
@@ -68,17 +73,35 @@ export default function ChatRoom() {
         .limit(1)
         .single();
 
+      const masterId = resp?.master_id ?? null;
+      console.log('[Chat] Accepted master ID:', masterId);
+
       if (!resp) {
+        console.log('[Chat] No accepted response found — chat read-only');
+        setCanWrite(false);
+        setLoading(false);
+        return;
+      }
+
+      const isParticipant = user.id === task.client_id || user.id === resp.master_id;
+      const isActive = task.status === 'in_progress';
+      const userCanWrite = isParticipant && isActive;
+      console.log('[Chat] Is participant:', isParticipant, '| Is active:', isActive, '| Can write:', userCanWrite);
+
+      if (!isParticipant) {
         navigate('/chats');
         return;
+      }
+
+      setCanWrite(userCanWrite);
+
+      if (userCanWrite) {
+        console.log('[Chat] ✅ Input field should be visible');
+      } else {
+        console.log('[Chat] ℹ️ Chat is read-only (status:', task.status, ')');
       }
 
       const otherId = task.client_id === user.id ? resp.master_id : task.client_id;
-
-      if (user.id !== task.client_id && user.id !== resp.master_id) {
-        navigate('/chats');
-        return;
-      }
 
       const { data: profile } = await supabase
         .from('profiles')
@@ -256,38 +279,46 @@ export default function ChatRoom() {
         })}
       </div>
 
-      {/* Input */}
-      <form onSubmit={handleSubmit} className="flex items-center gap-2 px-3 py-2 border-t bg-background shrink-0">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleImageUpload}
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={sending}
-          className="shrink-0"
-        >
-          <ImagePlus className="h-5 w-5" />
-        </Button>
-        <input
-          ref={inputRef}
-          value={newMessage}
-          onChange={e => setNewMessage(e.target.value)}
-          placeholder="Сообщение..."
-          autoFocus
-          enterKeyHint="send"
-          className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        />
-        <Button type="submit" size="icon" disabled={sending || !newMessage.trim()} className="shrink-0">
-          <Send className="h-4 w-4" />
-        </Button>
-      </form>
+      {/* Input or read-only notice */}
+      {canWrite ? (
+        <form onSubmit={handleSubmit} className="flex items-center gap-2 px-3 py-2 border-t bg-background shrink-0">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageUpload}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={sending}
+            className="shrink-0"
+          >
+            <ImagePlus className="h-5 w-5" />
+          </Button>
+          <input
+            ref={inputRef}
+            value={newMessage}
+            onChange={e => setNewMessage(e.target.value)}
+            placeholder="Сообщение..."
+            autoFocus
+            enterKeyHint="send"
+            className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          />
+          <Button type="submit" size="icon" disabled={sending || !newMessage.trim()} className="shrink-0">
+            <Send className="h-4 w-4" />
+          </Button>
+        </form>
+      ) : (
+        <div className="px-4 py-3 border-t bg-muted/50 text-center shrink-0">
+          <p className="text-xs text-muted-foreground">
+            {taskStatus === 'completed' ? 'Заказ завершён. Чат доступен только для чтения.' : 'Чат доступен только после выбора мастера'}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
