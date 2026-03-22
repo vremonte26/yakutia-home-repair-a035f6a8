@@ -302,7 +302,8 @@ export default function ChatRoom() {
       </div>
 
       {/* Input or read-only notice */}
-      {canWrite ? (
+      {/* TEMP: принудительное отображение для тестирования — заменить canWrite на true */}
+      {(canWrite || false) ? (
         <form onSubmit={handleSubmit} className="flex items-center gap-2 px-3 py-2 border-t bg-background shrink-0">
           <input
             ref={fileInputRef}
