@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ArrowLeft, Send, ImagePlus, User } from 'lucide-react';
+import { ArrowLeft, Send, ImagePlus, User, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -29,14 +28,25 @@ export default function ChatRoom() {
   const [taskTitle, setTaskTitle] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const fetchMessages = useCallback(async () => {
+    if (!taskId) return;
+    const { data: msgs } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('task_id', taskId)
+      .order('created_at', { ascending: true });
+    setMessages((msgs as Message[]) ?? []);
+  }, [taskId]);
 
   useEffect(() => {
     if (!taskId || !user) return;
 
     const init = async () => {
-      // Get task
       const { data: task } = await supabase
         .from('tasks')
         .select('id, title, client_id, status')
@@ -50,7 +60,6 @@ export default function ChatRoom() {
 
       setTaskTitle(task.title);
 
-      // Get accepted master
       const { data: resp } = await supabase
         .from('responses')
         .select('master_id')
@@ -66,7 +75,6 @@ export default function ChatRoom() {
 
       const otherId = task.client_id === user.id ? resp.master_id : task.client_id;
 
-      // Verify user is part of this chat
       if (user.id !== task.client_id && user.id !== resp.master_id) {
         navigate('/chats');
         return;
@@ -79,20 +87,12 @@ export default function ChatRoom() {
         .single();
 
       setOtherUser(profile);
-
-      // Fetch messages
-      const { data: msgs } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('task_id', taskId)
-        .order('created_at', { ascending: true });
-
-      setMessages((msgs as Message[]) ?? []);
+      await fetchMessages();
       setLoading(false);
     };
 
     init();
-  }, [taskId, user]);
+  }, [taskId, user, fetchMessages, navigate]);
 
   // Realtime messages
   useEffect(() => {
@@ -121,6 +121,19 @@ export default function ChatRoom() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
 
+  // Auto-focus input after loading
+  useEffect(() => {
+    if (!loading) {
+      setTimeout(() => inputRef.current?.focus(), 300);
+    }
+  }, [loading]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchMessages();
+    setRefreshing(false);
+  };
+
   const sendMessage = async (text?: string, imageUrl?: string) => {
     if (!user || !otherUser || !taskId) return;
     if (!text?.trim() && !imageUrl) return;
@@ -138,6 +151,7 @@ export default function ChatRoom() {
       toast({ title: 'Ошибка отправки', variant: 'destructive' });
     } else {
       setNewMessage('');
+      inputRef.current?.focus();
     }
     setSending(false);
   };
@@ -151,6 +165,7 @@ export default function ChatRoom() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
+    setSending(true);
     const ext = file.name.split('.').pop();
     const path = `${taskId}/${user.id}-${Date.now()}.${ext}`;
 
@@ -160,6 +175,7 @@ export default function ChatRoom() {
 
     if (uploadError) {
       toast({ title: 'Ошибка загрузки фото', variant: 'destructive' });
+      setSending(false);
       return;
     }
 
@@ -191,10 +207,19 @@ export default function ChatRoom() {
             <User className="h-4 w-4 text-muted-foreground" />
           )}
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="font-semibold text-sm truncate">{otherUser?.name}</p>
           <p className="text-[10px] text-muted-foreground truncate">{taskTitle}</p>
         </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="shrink-0"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+        </Button>
       </div>
 
       {/* Messages */}
@@ -245,15 +270,19 @@ export default function ChatRoom() {
           variant="ghost"
           size="icon"
           onClick={() => fileInputRef.current?.click()}
+          disabled={sending}
           className="shrink-0"
         >
           <ImagePlus className="h-5 w-5" />
         </Button>
-        <Input
+        <input
+          ref={inputRef}
           value={newMessage}
           onChange={e => setNewMessage(e.target.value)}
           placeholder="Сообщение..."
-          className="flex-1"
+          autoFocus
+          enterKeyHint="send"
+          className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         />
         <Button type="submit" size="icon" disabled={sending || !newMessage.trim()} className="shrink-0">
           <Send className="h-4 w-4" />
