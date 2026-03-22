@@ -12,6 +12,7 @@ import { ReviewForm } from '@/components/ReviewForm';
 import { TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constants';
 import { MapPin, Clock, ArrowLeft, CheckCircle, XCircle, Check, MessageCircle, Star } from 'lucide-react';
 import ClickableAvatar from '@/components/ClickableAvatar';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
@@ -43,6 +44,7 @@ export default function TaskDetail() {
   const [myReviews, setMyReviews] = useState<Set<string>>(new Set());
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [reviewTarget, setReviewTarget] = useState<{ id: string; name: string } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ label: string; action: () => Promise<void> } | null>(null);
 
   const isOwner = task?.client_id === user?.id;
   const isMaster = profile?.role === 'master';
@@ -211,7 +213,7 @@ export default function TaskDetail() {
           {isOwner && task.status === 'in_progress' && acceptedResponse && (
             <Button
               className="w-full gap-1"
-              onClick={completeTask}
+              onClick={() => setConfirmAction({ label: 'завершить заказ', action: completeTask })}
               disabled={actionLoading === 'complete'}
             >
               <Check className="h-4 w-4" /> Завершить заказ
@@ -234,7 +236,7 @@ export default function TaskDetail() {
                 response={acceptedResponse}
                 reviewCount={reviewCounts[acceptedResponse.master_id] || 0}
                 isAccepted
-                onCancel={!isCompleted ? () => cancelMaster(acceptedResponse.id) : undefined}
+                onCancel={!isCompleted ? () => setConfirmAction({ label: 'отменить мастера', action: () => cancelMaster(acceptedResponse.id) }) : undefined}
                 loading={actionLoading === acceptedResponse.id}
               />
             </div>
@@ -290,6 +292,17 @@ export default function TaskDetail() {
           <Star className="h-4 w-4 mr-2" /> Оставить отзыв клиенту
         </Button>
       )}
+
+      <ConfirmDialog
+        open={!!confirmAction}
+        actionLabel={confirmAction?.label ?? ''}
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={async () => {
+          const action = confirmAction?.action;
+          setConfirmAction(null);
+          if (action) await action();
+        }}
+      />
 
       {reviewTarget && (
         <ReviewForm
