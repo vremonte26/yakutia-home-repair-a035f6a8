@@ -26,6 +26,7 @@ export default function ChatRoom() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [newMessage, setNewMessage] = useState('');
   const [otherUser, setOtherUser] = useState<{ id: string; name: string; photo: string | null } | null>(null);
   const [taskTitle, setTaskTitle] = useState('');
