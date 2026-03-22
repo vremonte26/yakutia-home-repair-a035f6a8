@@ -195,6 +195,15 @@ export default function ChatRoom() {
     return () => { supabase.removeChannel(channel); };
   }, [taskId, user, taskTitle, toast]);
 
+  // Auto-refresh signed URLs every 50 minutes
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const interval = setInterval(() => {
+      resolveSignedUrls(messages);
+    }, 50 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [messages, resolveSignedUrls]);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
