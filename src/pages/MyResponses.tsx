@@ -10,6 +10,7 @@ import { Clock, X, MessageCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Ожидает',
@@ -30,6 +31,7 @@ export default function MyResponses() {
   const [responses, setResponses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ label: string; action: () => Promise<void> } | null>(null);
 
   const fetchResponses = async () => {
     if (!user) return;
@@ -101,7 +103,7 @@ export default function MyResponses() {
                     variant="outline"
                     className="gap-1 mt-1"
                     disabled={withdrawing === r.id}
-                    onClick={() => withdrawResponse(r.id)}
+                    onClick={() => setConfirmAction({ label: 'отозвать отклик', action: () => withdrawResponse(r.id) })}
                   >
                     <X className="h-3.5 w-3.5" /> Отозвать отклик
                   </Button>
@@ -127,6 +129,17 @@ export default function MyResponses() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmAction}
+        actionLabel={confirmAction?.label ?? ''}
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={async () => {
+          const action = confirmAction?.action;
+          setConfirmAction(null);
+          if (action) await action();
+        }}
+      />
     </div>
   );
 }

@@ -236,7 +236,7 @@ export default function TaskDetail() {
                 response={acceptedResponse}
                 reviewCount={reviewCounts[acceptedResponse.master_id] || 0}
                 isAccepted
-                onCancel={!isCompleted ? () => cancelMaster(acceptedResponse.id) : undefined}
+                onCancel={!isCompleted ? () => setConfirmAction({ label: 'отменить мастера', action: () => cancelMaster(acceptedResponse.id) }) : undefined}
                 loading={actionLoading === acceptedResponse.id}
               />
             </div>
