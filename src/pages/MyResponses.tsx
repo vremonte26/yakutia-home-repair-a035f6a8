@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CategoryBadge } from '@/components/CategoryBadge';
-import { Clock, X } from 'lucide-react';
+import { Clock, X, MessageCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +26,7 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive'> = 
 export default function MyResponses() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [responses, setResponses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [withdrawing, setWithdrawing] = useState<string | null>(null);
@@ -106,8 +108,18 @@ export default function MyResponses() {
                 )}
 
                 {r.status === 'accepted' && (
-                  <p className="text-xs text-muted-foreground italic">
-                    Вы выбраны исполнителем. Свяжитесь с клиентом через чат.
+                  <Button
+                    size="sm"
+                    className="gap-1 mt-1"
+                    onClick={() => navigate(`/chat/${r.task_id}`)}
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" /> Написать
+                  </Button>
+                )}
+
+                {r.status === 'pending' && (
+                  <p className="text-xs text-muted-foreground italic mt-1">
+                    Вы в резерве. Когда клиент выберет вас, здесь появится чат.
                   </p>
                 )}
               </CardContent>
