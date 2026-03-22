@@ -40,7 +40,9 @@ export default function TaskDetail() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [reviewCounts, setReviewCounts] = useState<Record<string, number>>({});
-  const [myReviews, setMyReviews] = useState<Set<string>>(new Set()); // set of to_user ids I already reviewed for this task
+  const [myReviews, setMyReviews] = useState<Set<string>>(new Set());
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [reviewTarget, setReviewTarget] = useState<{ id: string; name: string } | null>(null);
 
   const isOwner = task?.client_id === user?.id;
   const isMaster = profile?.role === 'master';
