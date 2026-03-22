@@ -30,7 +30,7 @@ export default function ChatList() {
     // Get tasks where user is involved and status is in_progress or completed
     const { data: tasks } = await supabase
       .from('tasks')
-      .select('id, title, client_id, status')
+      .select('id, title, client_id, status, created_at')
       .in('status', ['in_progress', 'completed']);
 
     if (!tasks || tasks.length === 0) {
