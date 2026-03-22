@@ -129,6 +129,12 @@ export default function TaskDetail() {
       await supabase.from('tasks').update({ status: 'completed' }).eq('id', id);
       toast({ title: 'Заказ завершён!' });
       await fetchData();
+      // Show review dialog for client after completing
+      const accepted = responses.find(r => r.status === 'accepted');
+      if (accepted?.profiles && !myReviews.has(accepted.master_id)) {
+        setReviewTarget({ id: accepted.master_id, name: accepted.profiles.name });
+        setReviewDialogOpen(true);
+      }
     } catch (e: any) {
       toast({ title: 'Ошибка', description: e.message, variant: 'destructive' });
     }
