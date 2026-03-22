@@ -275,7 +275,16 @@ export default function ChatRoom() {
         {messages.map(msg => {
           const isMine = msg.from_user === user?.id;
           return (
-            <div key={msg.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+            <div key={msg.id} className={`flex items-end gap-2 ${isMine ? 'justify-end' : 'justify-start'}`}>
+              {!isMine && (
+                <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0">
+                  {otherUser?.photo ? (
+                    <img src={otherUser.photo} className="w-7 h-7 rounded-full object-cover" alt="" />
+                  ) : (
+                    <User className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+                </div>
+              )}
               <div
                 className={`max-w-[75%] rounded-2xl px-3 py-2 ${
                   isMine
@@ -283,6 +292,9 @@ export default function ChatRoom() {
                     : 'bg-accent text-accent-foreground rounded-bl-md'
                 }`}
               >
+                <p className={`text-[10px] font-medium mb-0.5 ${isMine ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
+                  {isMine ? 'Вы' : otherUser?.name ?? 'Собеседник'}
+                </p>
                 {msg.image_url && (
                   <img
                     src={msg.image_url}
