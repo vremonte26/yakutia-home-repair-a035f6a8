@@ -74,6 +74,8 @@ function AppRoutes() {
       <Route path="/map" element={<MapPage />} />
       <Route path="/my-responses" element={<AppLayout><MyResponses /></AppLayout>} />
       <Route path="/task/:id" element={<AppLayout><TaskDetail /></AppLayout>} />
+      <Route path="/chats" element={<AppLayout><ChatList /></AppLayout>} />
+      <Route path="/chat/:taskId" element={<AppLayout><ChatRoom /></AppLayout>} />
       <Route path="/profile" element={<AppLayout><ProfilePage /></AppLayout>} />
       <Route path="*" element={<NotFound />} />
     </Routes>

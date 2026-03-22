@@ -13,12 +13,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
     ? [
         { to: '/', icon: ClipboardList, label: 'Лента' },
         { to: '/map', icon: Map, label: 'Карта' },
+        { to: '/chats', icon: MessageCircle, label: 'Чаты' },
         { to: '/my-responses', icon: Wrench, label: 'Отклики' },
         { to: '/profile', icon: User, label: 'Профиль' },
       ]
     : [
         { to: '/', icon: Home, label: 'Лента' },
         { to: '/map', icon: Map, label: 'Карта' },
+        { to: '/chats', icon: MessageCircle, label: 'Чаты' },
         { to: '/create-task', icon: PlusCircle, label: 'Создать' },
         { to: '/profile', icon: User, label: 'Профиль' },
       ];
