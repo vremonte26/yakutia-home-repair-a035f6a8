@@ -39,8 +39,19 @@ function AppRoutes() {
     );
   }
 
-  // Authenticated but no role selected yet (name is empty = just created via trigger)
+  // Authenticated but onboarding not complete
   if (profile && !profile.name) {
+    // Master already selected role but hasn't filled the form yet
+    if (profile.role === 'master') {
+      return (
+        <Routes>
+          <Route path="/master-setup" element={<MasterSetup />} />
+          <Route path="/moderation-pending" element={<ModerationPending />} />
+          <Route path="*" element={<Navigate to="/master-setup" replace />} />
+        </Routes>
+      );
+    }
+    // No role selected yet (default 'client' with empty name)
     return (
       <Routes>
         <Route path="/role-selection" element={<RoleSelection />} />
