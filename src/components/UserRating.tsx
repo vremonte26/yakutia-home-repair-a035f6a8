@@ -4,14 +4,21 @@ interface UserRatingProps {
   rating: number | null;
   reviewCount?: number;
   size?: 'sm' | 'md';
+  showEmpty?: boolean;
 }
 
-export function UserRating({ rating, reviewCount, size = 'sm' }: UserRatingProps) {
+export function UserRating({ rating, reviewCount, size = 'sm', showEmpty = false }: UserRatingProps) {
   const r = rating ?? 0;
-  if (r === 0 && (!reviewCount || reviewCount === 0)) return null;
+  const noReviews = r === 0 && (!reviewCount || reviewCount === 0);
+
+  if (noReviews && !showEmpty) return null;
 
   const iconSize = size === 'sm' ? 'h-3.5 w-3.5' : 'h-4 w-4';
   const textSize = size === 'sm' ? 'text-xs' : 'text-sm';
+
+  if (noReviews && showEmpty) {
+    return <span className={`${textSize} text-muted-foreground`}>Нет отзывов</span>;
+  }
 
   return (
     <span className={`inline-flex items-center gap-1 ${textSize}`}>
