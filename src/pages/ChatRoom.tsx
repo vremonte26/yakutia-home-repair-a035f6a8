@@ -39,6 +39,35 @@ export default function ChatRoom() {
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const resolveSignedUrls = useCallback(async (msgs: Message[]) => {
+    const imageMsgs = msgs.filter(m => m.image_url && !m.image_url.startsWith('http'));
+    if (imageMsgs.length === 0) {
+      // Some old messages may already have full URLs
+      return;
+    }
+    const paths = imageMsgs.map(m => m.image_url!);
+    const { data } = await supabase.storage
+      .from('chat-images')
+      .createSignedUrls(paths, 3600); // 1 hour
+    if (data) {
+      const urlMap: Record<string, string> = {};
+      data.forEach(item => {
+        if (item.signedUrl) {
+          urlMap[item.path ?? ''] = item.signedUrl;
+        }
+      });
+      setSignedUrls(prev => ({ ...prev, ...urlMap }));
+    }
+  }, []);
+
+  const getImageUrl = useCallback((imageUrl: string | null) => {
+    if (!imageUrl) return null;
+    // Already a full URL (legacy or signed)
+    if (imageUrl.startsWith('http')) return imageUrl;
+    // Look up signed URL
+    return signedUrls[imageUrl] || null;
+  }, [signedUrls]);
+
   const fetchMessages = useCallback(async () => {
     if (!taskId) return;
     const { data: msgs } = await supabase
@@ -46,8 +75,10 @@ export default function ChatRoom() {
       .select('*')
       .eq('task_id', taskId)
       .order('created_at', { ascending: true });
-    setMessages((msgs as Message[]) ?? []);
-  }, [taskId]);
+    const result = (msgs as Message[]) ?? [];
+    setMessages(result);
+    await resolveSignedUrls(result);
+  }, [taskId, resolveSignedUrls]);
 
   useEffect(() => {
     if (!taskId || !user) return;
