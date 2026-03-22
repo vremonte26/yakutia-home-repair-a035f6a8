@@ -11,6 +11,8 @@ import MasterSetup from "./pages/MasterSetup";
 import ModerationPending from "./pages/ModerationPending";
 import CreateTask from "./pages/CreateTask";
 import MyResponses from "./pages/MyResponses";
+import ChatList from "./pages/ChatList";
+import ChatRoom from "./pages/ChatRoom";
 import ProfilePage from "./pages/ProfilePage";
 import { AppLayout } from "./components/AppLayout";
 import TaskDetail from "./pages/TaskDetail";
