@@ -56,14 +56,18 @@ export default function ChatRoom() {
         .single();
 
       if (!task) {
+        console.warn('[Chat] ❌ Task not found for ID:', taskId);
         navigate('/chats');
         return;
       }
 
       setTaskTitle(task.title);
       setTaskStatus(task.status);
-      console.log('[Chat] Task status:', task.status);
-      console.log('[Chat] Current user ID:', user.id);
+      console.log('[Chat] === ЗАГРУЗКА ЧАТА ===');
+      console.log('[Chat] ID заказа:', taskId);
+      console.log('[Chat] Статус заказа:', task.status);
+      console.log('[Chat] ID текущего пользователя:', user.id);
+      console.log('[Chat] ID клиента заказа:', task.client_id);
 
       const { data: resp } = await supabase
         .from('responses')
@@ -74,10 +78,12 @@ export default function ChatRoom() {
         .single();
 
       const masterId = resp?.master_id ?? null;
-      console.log('[Chat] Accepted master ID:', masterId);
+      console.log('[Chat] ID выбранного мастера:', masterId);
 
       if (!resp) {
-        console.log('[Chat] No accepted response found — chat read-only');
+        console.log('[Chat] === ПРОВЕРКА ПРАВ ===');
+        console.log('[Chat] Результат: false');
+        console.log('[Chat] Причина: Нет принятого отклика (мастер не выбран)');
         setCanWrite(false);
         setLoading(false);
         return;
@@ -86,7 +92,17 @@ export default function ChatRoom() {
       const isParticipant = user.id === task.client_id || user.id === resp.master_id;
       const isActive = task.status === 'in_progress';
       const userCanWrite = isParticipant && isActive;
-      console.log('[Chat] Is participant:', isParticipant, '| Is active:', isActive, '| Can write:', userCanWrite);
+      
+      console.log('[Chat] === ПРОВЕРКА ПРАВ ===');
+      console.log('[Chat] Пользователь — участник чата:', isParticipant);
+      console.log('[Chat] Заказ активен (in_progress):', isActive);
+      console.log('[Chat] Результат (может писать):', userCanWrite);
+      if (!userCanWrite) {
+        const reasons: string[] = [];
+        if (!isParticipant) reasons.push('Пользователь не является участником чата');
+        if (!isActive) reasons.push(`Заказ не активен (статус: ${task.status})`);
+        console.log('[Chat] Причина отказа:', reasons.join('; '));
+      }
 
       if (!isParticipant) {
         navigate('/chats');
@@ -94,12 +110,6 @@ export default function ChatRoom() {
       }
 
       setCanWrite(userCanWrite);
-
-      if (userCanWrite) {
-        console.log('[Chat] ✅ Input field should be visible');
-      } else {
-        console.log('[Chat] ℹ️ Chat is read-only (status:', task.status, ')');
-      }
 
       const otherId = task.client_id === user.id ? resp.master_id : task.client_id;
 
@@ -112,6 +122,18 @@ export default function ChatRoom() {
       setOtherUser(profile);
       await fetchMessages();
       setLoading(false);
+      
+      // Проверка: если должно показываться поле ввода
+      if (userCanWrite) {
+        setTimeout(() => {
+          const inputEl = document.querySelector('form input[enterkeyhint="send"]');
+          if (!inputEl) {
+            console.warn('[Chat] ⚠️ ПРЕДУПРЕЖДЕНИЕ: Поле ввода должно отображаться (canWrite=true), но не найдено в DOM!');
+          } else {
+            console.log('[Chat] ✅ Поле ввода успешно отрисовано');
+          }
+        }, 500);
+      }
     };
 
     init();
@@ -280,7 +302,8 @@ export default function ChatRoom() {
       </div>
 
       {/* Input or read-only notice */}
-      {canWrite ? (
+      {/* TEMP: принудительное отображение для тестирования — заменить canWrite на true */}
+      {(canWrite || false) ? (
         <form onSubmit={handleSubmit} className="flex items-center gap-2 px-3 py-2 border-t bg-background shrink-0">
           <input
             ref={fileInputRef}
