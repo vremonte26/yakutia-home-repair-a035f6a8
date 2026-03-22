@@ -264,23 +264,41 @@ export default function TaskDetail() {
         </div>
       )}
 
-      {/* Review section */}
-      {canReviewMaster && acceptedResponse?.profiles && (
-        <ReviewForm
-          fromUserId={user!.id}
-          toUserId={acceptedResponse.master_id}
-          taskId={task.id}
-          toUserName={acceptedResponse.profiles.name}
-          onReviewSubmitted={fetchData}
-        />
+      {/* Review dialog - shown for both client reviewing master and master reviewing client */}
+      {canReviewMaster && acceptedResponse?.profiles && !reviewDialogOpen && (
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => {
+            setReviewTarget({ id: acceptedResponse.master_id, name: acceptedResponse.profiles!.name });
+            setReviewDialogOpen(true);
+          }}
+        >
+          <Star className="h-4 w-4 mr-2" /> Оставить отзыв мастеру
+        </Button>
       )}
 
-      {canReviewClient && (
+      {canReviewClient && !reviewDialogOpen && (
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => {
+            setReviewTarget({ id: task.client_id, name: 'клиента' });
+            setReviewDialogOpen(true);
+          }}
+        >
+          <Star className="h-4 w-4 mr-2" /> Оставить отзыв клиенту
+        </Button>
+      )}
+
+      {reviewTarget && (
         <ReviewForm
           fromUserId={user!.id}
-          toUserId={task.client_id}
+          toUserId={reviewTarget.id}
           taskId={task.id}
-          toUserName="клиента"
+          toUserName={reviewTarget.name}
+          open={reviewDialogOpen}
+          onClose={() => { setReviewDialogOpen(false); setReviewTarget(null); }}
           onReviewSubmitted={fetchData}
         />
       )}
