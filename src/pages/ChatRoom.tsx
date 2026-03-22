@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Send, User, RefreshCw, Clock } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { ArrowLeft, Send, User, RefreshCw, Clock, Paperclip, Loader2, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -31,8 +32,11 @@ export default function ChatRoom() {
   const [chatState, setChatState] = useState<ChatState>('loading');
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchMessages = useCallback(async () => {
     if (!taskId) return;
@@ -55,19 +59,12 @@ export default function ChatRoom() {
         .single();
 
       if (!task) {
-        console.warn('[Chat] ❌ Task not found:', taskId);
         navigate('/chats');
         return;
       }
 
       setTaskTitle(task.title);
-      console.log('[Chat] === ЗАГРУЗКА ЧАТА ===');
-      console.log('[Chat] ID заказа:', taskId);
-      console.log('[Chat] Статус заказа:', task.status);
-      console.log('[Chat] ID пользователя:', user.id);
-      console.log('[Chat] ID клиента:', task.client_id);
 
-      // Check for accepted response (selected master)
       const { data: acceptedResp } = await supabase
         .from('responses')
         .select('master_id')
@@ -77,13 +74,9 @@ export default function ChatRoom() {
         .single();
 
       const masterId = acceptedResp?.master_id ?? null;
-      console.log('[Chat] ID выбранного мастера:', masterId);
-
       const isClient = user.id === task.client_id;
 
-      // If no master selected yet
       if (!acceptedResp) {
-        // Check if this user has a pending response (master in reserve)
         if (!isClient) {
           const { data: pendingResp } = await supabase
             .from('responses')
@@ -94,15 +87,8 @@ export default function ChatRoom() {
             .limit(1)
             .single();
 
-          if (pendingResp) {
-            console.log('[Chat] Мастер в резерве (отклик pending)');
-            setChatState('reserve');
-          } else {
-            console.log('[Chat] Нет доступа к чату');
-            setChatState('no_access');
-          }
+          setChatState(pendingResp ? 'reserve' : 'no_access');
         } else {
-          console.log('[Chat] Клиент — мастер ещё не выбран');
           setChatState('reserve');
         }
         return;
@@ -112,19 +98,11 @@ export default function ChatRoom() {
       const isParticipant = isClient || isMaster;
 
       if (!isParticipant) {
-        console.log('[Chat] Нет доступа: не участник');
         navigate('/chats');
         return;
       }
 
-      const isActive = task.status === 'in_progress';
-      console.log('[Chat] Участник:', isParticipant, '| Активен:', isActive);
-
-      if (isActive) {
-        setChatState('active');
-      } else {
-        setChatState('readonly');
-      }
+      setChatState(task.status === 'in_progress' ? 'active' : 'readonly');
 
       const otherId = isClient ? masterId! : task.client_id;
       const { data: profile } = await supabase
@@ -140,7 +118,6 @@ export default function ChatRoom() {
     init();
   }, [taskId, user, fetchMessages, navigate]);
 
-  // Realtime messages
   useEffect(() => {
     if (!taskId || !user) return;
     const channel = supabase
@@ -160,7 +137,6 @@ export default function ChatRoom() {
     return () => { supabase.removeChannel(channel); };
   }, [taskId, user]);
 
-  // Listen for response acceptance (master gets notified)
   useEffect(() => {
     if (!taskId || !user) return;
     const channel = supabase
@@ -175,7 +151,6 @@ export default function ChatRoom() {
               title: '🎉 Вас выбрали исполнителем!',
               description: `Заказ «${taskTitle || 'Новый заказ'}». Перейдите в чат для уточнения деталей.`,
             });
-            // Reload chat to activate
             window.location.reload();
           }
         }
@@ -184,12 +159,10 @@ export default function ChatRoom() {
     return () => { supabase.removeChannel(channel); };
   }, [taskId, user, taskTitle, toast]);
 
-  // Auto-scroll
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
 
-  // Auto-focus
   useEffect(() => {
     if (chatState === 'active') {
       setTimeout(() => inputRef.current?.focus(), 300);
@@ -202,17 +175,17 @@ export default function ChatRoom() {
     setRefreshing(false);
   };
 
-  const sendMessage = async (text?: string) => {
+  const sendMessage = async (text?: string, imageUrl?: string) => {
     if (!user || !otherUser || !taskId) return;
-    if (!text?.trim()) return;
+    if (!text?.trim() && !imageUrl) return;
 
     setSending(true);
     const { error } = await supabase.from('messages').insert({
       task_id: taskId,
       from_user: user.id,
       to_user: otherUser.id,
-      text: text.trim(),
-      image_url: null,
+      text: text?.trim() || null,
+      image_url: imageUrl || null,
     });
 
     if (error) {
@@ -222,6 +195,45 @@ export default function ChatRoom() {
       inputRef.current?.focus();
     }
     setSending(false);
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user || !taskId) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Можно отправлять только изображения', variant: 'destructive' });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Максимальный размер фото — 5 МБ', variant: 'destructive' });
+      return;
+    }
+
+    setUploading(true);
+    const ext = file.name.split('.').pop() || 'jpg';
+    const filePath = `${taskId}/${user.id}_${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('chat-images')
+      .upload(filePath, file);
+
+    if (uploadError) {
+      toast({ title: 'Ошибка загрузки фото', description: uploadError.message, variant: 'destructive' });
+      setUploading(false);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('chat-images')
+      .getPublicUrl(filePath);
+
+    await sendMessage(null, urlData.publicUrl);
+    setUploading(false);
+
+    // Reset file input
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -319,9 +331,9 @@ export default function ChatRoom() {
                 {msg.image_url && (
                   <img
                     src={msg.image_url}
-                    alt=""
-                    className="rounded-lg max-w-full mb-1 cursor-pointer"
-                    onClick={() => window.open(msg.image_url!, '_blank')}
+                    alt="Фото"
+                    className="rounded-lg max-w-full max-h-52 object-cover mb-1 cursor-pointer"
+                    onClick={() => setFullscreenImage(msg.image_url)}
                   />
                 )}
                 {msg.text && <p className="text-sm whitespace-pre-wrap break-words">{msg.text}</p>}
@@ -338,15 +350,37 @@ export default function ChatRoom() {
       {chatState === 'active' ? (
         <form onSubmit={handleSubmit} className="flex items-center gap-2 px-3 py-2 border-t bg-background shrink-0">
           <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            disabled={uploading}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {uploading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <Paperclip className="h-5 w-5" />
+            )}
+          </Button>
+          <input
             ref={inputRef}
             value={newMessage}
             onChange={e => setNewMessage(e.target.value)}
             placeholder="Сообщение..."
             autoFocus
             enterKeyHint="send"
+            disabled={uploading}
             className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           />
-          <Button type="submit" size="icon" disabled={sending || !newMessage.trim()} className="shrink-0">
+          <Button type="submit" size="icon" disabled={sending || uploading || !newMessage.trim()} className="shrink-0">
             <Send className="h-4 w-4" />
           </Button>
         </form>
@@ -357,6 +391,27 @@ export default function ChatRoom() {
           </p>
         </div>
       )}
+
+      {/* Fullscreen image dialog */}
+      <Dialog open={!!fullscreenImage} onOpenChange={() => setFullscreenImage(null)}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 border-0 bg-black/90 flex items-center justify-center">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-2 right-2 text-white hover:bg-white/20 z-10"
+            onClick={() => setFullscreenImage(null)}
+          >
+            <X className="h-5 w-5" />
+          </Button>
+          {fullscreenImage && (
+            <img
+              src={fullscreenImage}
+              alt="Фото"
+              className="max-w-full max-h-[90vh] object-contain"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
