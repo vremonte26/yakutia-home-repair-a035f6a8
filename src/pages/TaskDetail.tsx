@@ -187,6 +187,17 @@ export default function TaskDetail() {
             </span>
           </div>
 
+          {/* Chat button */}
+          {(task.status === 'in_progress' || task.status === 'completed') && acceptedResponse && (isOwner || (isMaster && acceptedResponse.master_id === user?.id)) && (
+            <Button
+              variant="outline"
+              className="w-full gap-1"
+              onClick={() => navigate(`/chat/${task.id}`)}
+            >
+              <MessageCircle className="h-4 w-4" /> Перейти в чат
+            </Button>
+          )}
+
           {/* Complete button for client */}
           {isOwner && task.status === 'in_progress' && acceptedResponse && (
             <Button
