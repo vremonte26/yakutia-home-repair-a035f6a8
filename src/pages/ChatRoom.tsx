@@ -26,6 +26,8 @@ export default function ChatRoom() {
   const [newMessage, setNewMessage] = useState('');
   const [otherUser, setOtherUser] = useState<{ id: string; name: string; photo: string | null } | null>(null);
   const [taskTitle, setTaskTitle] = useState('');
+  const [taskStatus, setTaskStatus] = useState<string>('');
+  const [canWrite, setCanWrite] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
