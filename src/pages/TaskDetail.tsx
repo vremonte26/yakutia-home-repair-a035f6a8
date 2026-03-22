@@ -10,7 +10,7 @@ import { CategoryBadge } from '@/components/CategoryBadge';
 import { UserRating } from '@/components/UserRating';
 import { ReviewForm } from '@/components/ReviewForm';
 import { TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constants';
-import { MapPin, Clock, ArrowLeft, User, CheckCircle, XCircle, Check } from 'lucide-react';
+import { MapPin, Clock, ArrowLeft, User, CheckCircle, XCircle, Check, MessageCircle } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
@@ -186,6 +186,17 @@ export default function TaskDetail() {
               {formatDistanceToNow(new Date(task.created_at), { addSuffix: true, locale: ru })}
             </span>
           </div>
+
+          {/* Chat button */}
+          {(task.status === 'in_progress' || task.status === 'completed') && acceptedResponse && (isOwner || (isMaster && acceptedResponse.master_id === user?.id)) && (
+            <Button
+              variant="outline"
+              className="w-full gap-1"
+              onClick={() => navigate(`/chat/${task.id}`)}
+            >
+              <MessageCircle className="h-4 w-4" /> Перейти в чат
+            </Button>
+          )}
 
           {/* Complete button for client */}
           {isOwner && task.status === 'in_progress' && acceptedResponse && (
