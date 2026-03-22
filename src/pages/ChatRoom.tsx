@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Send, ImagePlus, User, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Send, User, RefreshCw, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +17,8 @@ interface Message {
   created_at: string;
 }
 
+type ChatState = 'loading' | 'active' | 'reserve' | 'readonly' | 'no_access';
+
 export default function ChatRoom() {
   const { taskId } = useParams<{ taskId: string }>();
   const { user } = useAuth();
@@ -26,13 +28,10 @@ export default function ChatRoom() {
   const [newMessage, setNewMessage] = useState('');
   const [otherUser, setOtherUser] = useState<{ id: string; name: string; photo: string | null } | null>(null);
   const [taskTitle, setTaskTitle] = useState('');
-  const [taskStatus, setTaskStatus] = useState<string>('');
-  const [canWrite, setCanWrite] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [chatState, setChatState] = useState<ChatState>('loading');
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const fetchMessages = useCallback(async () => {
@@ -56,20 +55,20 @@ export default function ChatRoom() {
         .single();
 
       if (!task) {
-        console.warn('[Chat] ❌ Task not found for ID:', taskId);
+        console.warn('[Chat] ❌ Task not found:', taskId);
         navigate('/chats');
         return;
       }
 
       setTaskTitle(task.title);
-      setTaskStatus(task.status);
       console.log('[Chat] === ЗАГРУЗКА ЧАТА ===');
       console.log('[Chat] ID заказа:', taskId);
       console.log('[Chat] Статус заказа:', task.status);
-      console.log('[Chat] ID текущего пользователя:', user.id);
-      console.log('[Chat] ID клиента заказа:', task.client_id);
+      console.log('[Chat] ID пользователя:', user.id);
+      console.log('[Chat] ID клиента:', task.client_id);
 
-      const { data: resp } = await supabase
+      // Check for accepted response (selected master)
+      const { data: acceptedResp } = await supabase
         .from('responses')
         .select('master_id')
         .eq('task_id', taskId)
@@ -77,42 +76,57 @@ export default function ChatRoom() {
         .limit(1)
         .single();
 
-      const masterId = resp?.master_id ?? null;
+      const masterId = acceptedResp?.master_id ?? null;
       console.log('[Chat] ID выбранного мастера:', masterId);
 
-      if (!resp) {
-        console.log('[Chat] === ПРОВЕРКА ПРАВ ===');
-        console.log('[Chat] Результат: false');
-        console.log('[Chat] Причина: Нет принятого отклика (мастер не выбран)');
-        setCanWrite(false);
-        setLoading(false);
+      const isClient = user.id === task.client_id;
+
+      // If no master selected yet
+      if (!acceptedResp) {
+        // Check if this user has a pending response (master in reserve)
+        if (!isClient) {
+          const { data: pendingResp } = await supabase
+            .from('responses')
+            .select('id')
+            .eq('task_id', taskId)
+            .eq('master_id', user.id)
+            .eq('status', 'pending')
+            .limit(1)
+            .single();
+
+          if (pendingResp) {
+            console.log('[Chat] Мастер в резерве (отклик pending)');
+            setChatState('reserve');
+          } else {
+            console.log('[Chat] Нет доступа к чату');
+            setChatState('no_access');
+          }
+        } else {
+          console.log('[Chat] Клиент — мастер ещё не выбран');
+          setChatState('reserve');
+        }
         return;
       }
 
-      const isParticipant = user.id === task.client_id || user.id === resp.master_id;
-      const isActive = task.status === 'in_progress';
-      const userCanWrite = isParticipant && isActive;
-      
-      console.log('[Chat] === ПРОВЕРКА ПРАВ ===');
-      console.log('[Chat] Пользователь — участник чата:', isParticipant);
-      console.log('[Chat] Заказ активен (in_progress):', isActive);
-      console.log('[Chat] Результат (может писать):', userCanWrite);
-      if (!userCanWrite) {
-        const reasons: string[] = [];
-        if (!isParticipant) reasons.push('Пользователь не является участником чата');
-        if (!isActive) reasons.push(`Заказ не активен (статус: ${task.status})`);
-        console.log('[Chat] Причина отказа:', reasons.join('; '));
-      }
+      const isMaster = user.id === masterId;
+      const isParticipant = isClient || isMaster;
 
       if (!isParticipant) {
+        console.log('[Chat] Нет доступа: не участник');
         navigate('/chats');
         return;
       }
 
-      setCanWrite(userCanWrite);
+      const isActive = task.status === 'in_progress';
+      console.log('[Chat] Участник:', isParticipant, '| Активен:', isActive);
 
-      const otherId = task.client_id === user.id ? resp.master_id : task.client_id;
+      if (isActive) {
+        setChatState('active');
+      } else {
+        setChatState('readonly');
+      }
 
+      const otherId = isClient ? masterId! : task.client_id;
       const { data: profile } = await supabase
         .from('profiles')
         .select('id, name, photo')
@@ -121,19 +135,6 @@ export default function ChatRoom() {
 
       setOtherUser(profile);
       await fetchMessages();
-      setLoading(false);
-      
-      // Проверка: если должно показываться поле ввода
-      if (userCanWrite) {
-        setTimeout(() => {
-          const inputEl = document.querySelector('form input[enterkeyhint="send"]');
-          if (!inputEl) {
-            console.warn('[Chat] ⚠️ ПРЕДУПРЕЖДЕНИЕ: Поле ввода должно отображаться (canWrite=true), но не найдено в DOM!');
-          } else {
-            console.log('[Chat] ✅ Поле ввода успешно отрисовано');
-          }
-        }, 500);
-      }
     };
 
     init();
@@ -142,7 +143,6 @@ export default function ChatRoom() {
   // Realtime messages
   useEffect(() => {
     if (!taskId || !user) return;
-
     const channel = supabase
       .channel(`chat-${taskId}`)
       .on(
@@ -157,21 +157,44 @@ export default function ChatRoom() {
         }
       )
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, [taskId, user]);
+
+  // Listen for response acceptance (master gets notified)
+  useEffect(() => {
+    if (!taskId || !user) return;
+    const channel = supabase
+      .channel(`response-status-${taskId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'responses', filter: `task_id=eq.${taskId}` },
+        (payload) => {
+          const updated = payload.new as { master_id: string; status: string };
+          if (updated.status === 'accepted' && updated.master_id === user.id) {
+            toast({
+              title: '🎉 Вас выбрали исполнителем!',
+              description: `Заказ «${taskTitle || 'Новый заказ'}». Перейдите в чат для уточнения деталей.`,
+            });
+            // Reload chat to activate
+            window.location.reload();
+          }
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [taskId, user, taskTitle, toast]);
 
   // Auto-scroll
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
 
-  // Auto-focus input after loading
+  // Auto-focus
   useEffect(() => {
-    if (!loading) {
+    if (chatState === 'active') {
       setTimeout(() => inputRef.current?.focus(), 300);
     }
-  }, [loading]);
+  }, [chatState]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -179,17 +202,17 @@ export default function ChatRoom() {
     setRefreshing(false);
   };
 
-  const sendMessage = async (text?: string, imageUrl?: string) => {
+  const sendMessage = async (text?: string) => {
     if (!user || !otherUser || !taskId) return;
-    if (!text?.trim() && !imageUrl) return;
+    if (!text?.trim()) return;
 
     setSending(true);
     const { error } = await supabase.from('messages').insert({
       task_id: taskId,
       from_user: user.id,
       to_user: otherUser.id,
-      text: text?.trim() || null,
-      image_url: imageUrl || null,
+      text: text.trim(),
+      image_url: null,
     });
 
     if (error) {
@@ -206,34 +229,38 @@ export default function ChatRoom() {
     sendMessage(newMessage);
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-
-    setSending(true);
-    const ext = file.name.split('.').pop();
-    const path = `${taskId}/${user.id}-${Date.now()}.${ext}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('chat-images')
-      .upload(path, file);
-
-    if (uploadError) {
-      toast({ title: 'Ошибка загрузки фото', variant: 'destructive' });
-      setSending(false);
-      return;
-    }
-
-    const { data: urlData } = supabase.storage.from('chat-images').getPublicUrl(path);
-    await sendMessage(undefined, urlData.publicUrl);
-
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  if (loading) {
+  if (chatState === 'loading') {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (chatState === 'no_access') {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 px-4 text-center gap-4">
+        <p className="text-muted-foreground">У вас нет доступа к этому чату</p>
+        <Button variant="outline" onClick={() => navigate('/chats')}>
+          <ArrowLeft className="h-4 w-4 mr-2" /> К чатам
+        </Button>
+      </div>
+    );
+  }
+
+  if (chatState === 'reserve') {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 px-6 text-center gap-4">
+        <div className="w-16 h-16 rounded-full bg-accent flex items-center justify-center">
+          <Clock className="h-8 w-8 text-muted-foreground" />
+        </div>
+        <h2 className="text-lg font-semibold">Вы в резерве</h2>
+        <p className="text-sm text-muted-foreground max-w-xs">
+          Когда клиент выберет вас исполнителем, здесь появится чат для обсуждения деталей заказа.
+        </p>
+        <Button variant="outline" onClick={() => navigate(-1)}>
+          <ArrowLeft className="h-4 w-4 mr-2" /> Назад
+        </Button>
       </div>
     );
   }
@@ -256,13 +283,7 @@ export default function ChatRoom() {
           <p className="font-semibold text-sm truncate">{otherUser?.name}</p>
           <p className="text-[10px] text-muted-foreground truncate">{taskTitle}</p>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="shrink-0"
-        >
+        <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={refreshing} className="shrink-0">
           <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
         </Button>
       </div>
@@ -313,26 +334,29 @@ export default function ChatRoom() {
         })}
       </div>
 
-      {/* Input — always visible */}
-      <form onSubmit={handleSubmit} className="flex items-center gap-2 px-3 py-2 border-t bg-background shrink-0">
-        <input
-          ref={inputRef}
-          value={newMessage}
-          onChange={e => setNewMessage(e.target.value)}
-          placeholder="Сообщение..."
-          autoFocus
-          enterKeyHint="send"
-          className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        />
-        <Button type="submit" size="icon" disabled={sending || !newMessage.trim()} className="shrink-0">
-          <Send className="h-4 w-4" />
-        </Button>
-      </form>
-      <div className="px-3 pb-2 shrink-0">
-        <Button variant="outline" size="sm" className="w-full" onClick={() => alert('Чат активен')}>
-          Тест
-        </Button>
-      </div>
+      {/* Input or readonly banner */}
+      {chatState === 'active' ? (
+        <form onSubmit={handleSubmit} className="flex items-center gap-2 px-3 py-2 border-t bg-background shrink-0">
+          <input
+            ref={inputRef}
+            value={newMessage}
+            onChange={e => setNewMessage(e.target.value)}
+            placeholder="Сообщение..."
+            autoFocus
+            enterKeyHint="send"
+            className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          />
+          <Button type="submit" size="icon" disabled={sending || !newMessage.trim()} className="shrink-0">
+            <Send className="h-4 w-4" />
+          </Button>
+        </form>
+      ) : (
+        <div className="px-3 py-3 border-t bg-muted/50 text-center shrink-0">
+          <p className="text-xs text-muted-foreground">
+            {chatState === 'readonly' ? 'Заказ завершён. Чат доступен только для чтения.' : 'Чат недоступен'}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
