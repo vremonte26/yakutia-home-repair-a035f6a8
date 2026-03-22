@@ -141,21 +141,26 @@ export default function MasterDashboard() {
             const alreadyResponded = respondedTaskIds.has(task.id);
             const count = responseCounts[task.id] || 0;
             const isFull = count >= 5;
+            const isOwnTask = task.client_id === user?.id;
 
             return (
               <TaskCard key={task.id} task={task}>
                 <div className="flex items-center justify-between mt-2 gap-2">
                   <span className="text-xs text-muted-foreground">{count}/5 откликов</span>
-                  <Button
-                    size="sm"
-                    disabled={alreadyResponded || isFull}
-                    onClick={e => {
-                      e.stopPropagation();
-                      respond(task.id);
-                    }}
-                  >
-                    {alreadyResponded ? '✓ Вы откликнулись' : isFull ? 'Набрано' : 'Откликнуться'}
-                  </Button>
+                  {isOwnTask ? (
+                    <span className="text-xs text-muted-foreground italic">Ваша заявка</span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      disabled={alreadyResponded || isFull}
+                      onClick={e => {
+                        e.stopPropagation();
+                        respond(task.id);
+                      }}
+                    >
+                      {alreadyResponded ? '✓ Вы откликнулись' : isFull ? 'Набрано' : 'Откликнуться'}
+                    </Button>
+                  )}
                 </div>
               </TaskCard>
             );
