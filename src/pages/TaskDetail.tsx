@@ -293,6 +293,17 @@ export default function TaskDetail() {
         </Button>
       )}
 
+      <ConfirmDialog
+        open={!!confirmAction}
+        actionLabel={confirmAction?.label ?? ''}
+        onCancel={() => setConfirmAction(null)}
+        onConfirm={async () => {
+          const action = confirmAction?.action;
+          setConfirmAction(null);
+          if (action) await action();
+        }}
+      />
+
       {reviewTarget && (
         <ReviewForm
           fromUserId={user!.id}
