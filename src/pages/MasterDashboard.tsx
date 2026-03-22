@@ -14,6 +14,8 @@ export default function MasterDashboard() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [respondedTaskIds, setRespondedTaskIds] = useState<Set<string>>(new Set());
   const [responseCounts, setResponseCounts] = useState<Record<string, number>>({});
+  const [clientProfiles, setClientProfiles] = useState<Record<string, { name: string; rating: number | null }>>({});
+  const [clientReviewCounts, setClientReviewCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string | null>(null);
 
