@@ -342,6 +342,7 @@ export default function ChatRoom() {
         )}
         {messages.map(msg => {
           const isMine = msg.from_user === user?.id;
+          const resolvedImageUrl = getImageUrl(msg.image_url);
           return (
             <div key={msg.id} className={`flex items-end gap-2 ${isMine ? 'justify-end' : 'justify-start'}`}>
               {!isMine && (
@@ -363,13 +364,19 @@ export default function ChatRoom() {
                 <p className={`text-[10px] font-medium mb-0.5 ${isMine ? 'text-primary-foreground/80' : 'text-muted-foreground'}`}>
                   {isMine ? 'Вы' : otherUser?.name ?? 'Собеседник'}
                 </p>
-                {msg.image_url && (
+                {msg.image_url && resolvedImageUrl && (
                   <img
-                    src={msg.image_url}
+                    src={resolvedImageUrl}
                     alt="Фото"
                     className="rounded-lg max-w-full max-h-52 object-cover mb-1 cursor-pointer"
-                    onClick={() => setFullscreenImage(msg.image_url)}
+                    onClick={() => setFullscreenImage(resolvedImageUrl)}
                   />
+                )}
+                {msg.image_url && !resolvedImageUrl && (
+                  <div className="flex items-center gap-2 py-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-xs">Загрузка фото...</span>
+                  </div>
                 )}
                 {msg.text && <p className="text-sm whitespace-pre-wrap break-words">{msg.text}</p>}
                 <p className={`text-[10px] mt-1 ${isMine ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
