@@ -44,6 +44,7 @@ export default function TaskDetail() {
   const [myReviews, setMyReviews] = useState<Set<string>>(new Set());
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [reviewTarget, setReviewTarget] = useState<{ id: string; name: string } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ label: string; action: () => Promise<void> } | null>(null);
 
   const isOwner = task?.client_id === user?.id;
   const isMaster = profile?.role === 'master';
