@@ -3,8 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { ArrowLeft, Send, User, RefreshCw, Clock, Paperclip, Loader2, X } from 'lucide-react';
+import FullscreenImage from '@/components/FullscreenImage';
+import { ArrowLeft, Send, User, RefreshCw, Clock, Paperclip, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
@@ -443,26 +443,10 @@ export default function ChatRoom() {
         </div>
       )}
 
-      {/* Fullscreen image dialog */}
-      <Dialog open={!!fullscreenImage} onOpenChange={() => setFullscreenImage(null)}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 border-0 bg-black/90 flex items-center justify-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-2 right-2 text-white hover:bg-white/20 z-10"
-            onClick={() => setFullscreenImage(null)}
-          >
-            <X className="h-5 w-5" />
-          </Button>
-          {fullscreenImage && (
-            <img
-              src={fullscreenImage}
-              alt="Фото"
-              className="max-w-full max-h-[90vh] object-contain"
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Fullscreen image */}
+      {fullscreenImage && (
+        <FullscreenImage src={fullscreenImage} onClose={() => setFullscreenImage(null)} />
+      )}
     </div>
   );
 }
