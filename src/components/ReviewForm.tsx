@@ -2,36 +2,44 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 interface ReviewFormProps {
   fromUserId: string;
   toUserId: string;
   taskId: string;
   toUserName: string;
+  open: boolean;
+  onClose: () => void;
   onReviewSubmitted: () => void;
 }
 
-export function ReviewForm({ fromUserId, toUserId, taskId, toUserName, onReviewSubmitted }: ReviewFormProps) {
+export function ReviewForm({ fromUserId, toUserId, taskId, toUserName, open, onClose, onReviewSubmitted }: ReviewFormProps) {
   const { toast } = useToast();
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  const hasContent = rating > 0 || comment.trim().length > 0;
+
   const handleSubmit = async () => {
-    if (rating === 0) {
-      toast({ title: 'Выберите оценку', variant: 'destructive' });
-      return;
-    }
+    if (!hasContent) return;
     setSubmitting(true);
     const { error } = await supabase.from('reviews').insert({
       from_user: fromUserId,
       to_user: toUserId,
       task_id: taskId,
-      rating,
+      rating: rating || 0,
       comment: comment.trim() || null,
     });
     setSubmitting(false);
@@ -44,47 +52,68 @@ export function ReviewForm({ fromUserId, toUserId, taskId, toUserName, onReviewS
       return;
     }
     toast({ title: 'Отзыв отправлен!' });
+    setRating(0);
+    setComment('');
     onReviewSubmitted();
+    onClose();
+  };
+
+  const handleSkip = () => {
+    setRating(0);
+    setComment('');
+    onClose();
   };
 
   const displayRating = hoveredRating || rating;
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold">Оставить отзыв — {toUserName}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex gap-1">
-          {[1, 2, 3, 4, 5].map(star => (
-            <button
-              key={star}
-              type="button"
-              onClick={() => setRating(star)}
-              onMouseEnter={() => setHoveredRating(star)}
-              onMouseLeave={() => setHoveredRating(0)}
-              className="p-0.5 transition-transform hover:scale-110"
-            >
-              <Star
-                className={`h-7 w-7 transition-colors ${
-                  star <= displayRating
-                    ? 'fill-amber-400 text-amber-400'
-                    : 'text-muted-foreground/30'
-                }`}
-              />
-            </button>
-          ))}
+    <Dialog open={open} onOpenChange={(v) => { if (!v) handleSkip(); }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Как прошла работа?</DialogTitle>
+          <DialogDescription>
+            Оцените {toUserName} (по желанию)
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="flex gap-1 justify-center">
+            {[1, 2, 3, 4, 5].map(star => (
+              <button
+                key={star}
+                type="button"
+                onClick={() => setRating(prev => prev === star ? 0 : star)}
+                onMouseEnter={() => setHoveredRating(star)}
+                onMouseLeave={() => setHoveredRating(0)}
+                className="p-1 transition-transform hover:scale-110"
+              >
+                <Star
+                  className={`h-8 w-8 transition-colors ${
+                    star <= displayRating
+                      ? 'fill-amber-400 text-amber-400'
+                      : 'text-muted-foreground/30'
+                  }`}
+                />
+              </button>
+            ))}
+          </div>
+          <Textarea
+            placeholder="Комментарий (необязательно)"
+            value={comment}
+            onChange={e => setComment(e.target.value)}
+            rows={3}
+          />
         </div>
-        <Textarea
-          placeholder="Комментарий (необязательно)"
-          value={comment}
-          onChange={e => setComment(e.target.value)}
-          rows={3}
-        />
-        <Button size="sm" onClick={handleSubmit} disabled={submitting || rating === 0}>
-          {submitting ? 'Отправка...' : 'Отправить отзыв'}
-        </Button>
-      </CardContent>
-    </Card>
+        <DialogFooter className="flex gap-2 sm:gap-2">
+          <Button variant="ghost" onClick={handleSkip}>
+            Пропустить
+          </Button>
+          {hasContent && (
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting ? 'Отправка...' : 'Опубликовать'}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

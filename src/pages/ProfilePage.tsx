@@ -268,9 +268,7 @@ export default function ProfilePage() {
             </div>
           )}
 
-          {(profile.rating !== null && profile.rating > 0 || reviewCount > 0) && (
-            <UserRating rating={profile.rating} reviewCount={reviewCount} size="md" />
-          )}
+          <UserRating rating={profile.rating} reviewCount={reviewCount} size="md" showEmpty />
 
           {isMaster && profile.work_area && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
