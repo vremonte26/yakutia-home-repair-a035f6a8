@@ -10,7 +10,8 @@ import { CategoryBadge } from '@/components/CategoryBadge';
 import { UserRating } from '@/components/UserRating';
 import { ReviewForm } from '@/components/ReviewForm';
 import { TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constants';
-import { MapPin, Clock, ArrowLeft, User, CheckCircle, XCircle, Check, MessageCircle } from 'lucide-react';
+import { MapPin, Clock, ArrowLeft, CheckCircle, XCircle, Check, MessageCircle } from 'lucide-react';
+import ClickableAvatar from '@/components/ClickableAvatar';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
@@ -303,13 +304,7 @@ function MasterCard({
     <Card className={isAccepted ? 'border-primary/50 bg-primary/5' : ''}>
       <CardContent className="p-4 space-y-2">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center shrink-0">
-            {master.photo ? (
-              <img src={master.photo} className="w-10 h-10 rounded-full object-cover" alt="" />
-            ) : (
-              <User className="h-5 w-5 text-muted-foreground" />
-            )}
-          </div>
+          <ClickableAvatar src={master.photo} name={master.name} size="md" />
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm truncate">{master.name}</p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
