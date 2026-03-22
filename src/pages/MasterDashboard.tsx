@@ -67,6 +67,12 @@ export default function MasterDashboard() {
   const respond = async (taskId: string) => {
     if (!user) return;
 
+    const task = tasks.find(t => t.id === taskId);
+    if (task?.client_id === user.id) {
+      toast({ title: 'Нельзя откликнуться на свою собственную заявку', variant: 'destructive' });
+      return;
+    }
+
     if ((responseCounts[taskId] || 0) >= 5) {
       toast({ title: 'Максимум откликов на этот заказ', variant: 'destructive' });
       return;
@@ -79,6 +85,8 @@ export default function MasterDashboard() {
     if (error) {
       if (error.code === '23505') {
         toast({ title: 'Вы уже откликнулись на этот заказ', variant: 'destructive' });
+      } else if (error.message?.includes('Cannot respond to your own task')) {
+        toast({ title: 'Нельзя откликнуться на свою собственную заявку', variant: 'destructive' });
       } else if (error.message?.includes('Maximum 5')) {
         toast({ title: 'Максимум 5 откликов на заказ', variant: 'destructive' });
       } else {
@@ -141,21 +149,26 @@ export default function MasterDashboard() {
             const alreadyResponded = respondedTaskIds.has(task.id);
             const count = responseCounts[task.id] || 0;
             const isFull = count >= 5;
+            const isOwnTask = task.client_id === user?.id;
 
             return (
               <TaskCard key={task.id} task={task}>
                 <div className="flex items-center justify-between mt-2 gap-2">
                   <span className="text-xs text-muted-foreground">{count}/5 откликов</span>
-                  <Button
-                    size="sm"
-                    disabled={alreadyResponded || isFull}
-                    onClick={e => {
-                      e.stopPropagation();
-                      respond(task.id);
-                    }}
-                  >
-                    {alreadyResponded ? '✓ Вы откликнулись' : isFull ? 'Набрано' : 'Откликнуться'}
-                  </Button>
+                  {isOwnTask ? (
+                    <span className="text-xs text-muted-foreground italic">Ваша заявка</span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      disabled={alreadyResponded || isFull}
+                      onClick={e => {
+                        e.stopPropagation();
+                        respond(task.id);
+                      }}
+                    >
+                      {alreadyResponded ? '✓ Вы откликнулись' : isFull ? 'Набрано' : 'Откликнуться'}
+                    </Button>
+                  )}
                 </div>
               </TaskCard>
             );
