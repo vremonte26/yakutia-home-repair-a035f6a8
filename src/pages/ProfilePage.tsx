@@ -211,17 +211,7 @@ export default function ProfilePage() {
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="relative group">
-              {profile.photo ? (
-                <img
-                  src={profile.photo}
-                  alt={profile.name}
-                  className="w-16 h-16 rounded-2xl object-cover"
-                />
-              ) : (
-                <div className="w-16 h-16 rounded-2xl bg-accent flex items-center justify-center text-2xl font-bold text-accent-foreground">
-                  {profile.name?.[0]?.toUpperCase() || '?'}
-                </div>
-              )}
+              <ClickableAvatar src={profile.photo} name={profile.name} size="lg" />
               {!profile.is_photo_moderated && (
                 <button
                   type="button"
