@@ -12,6 +12,7 @@ import { ReviewForm } from '@/components/ReviewForm';
 import { TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constants';
 import { MapPin, Clock, ArrowLeft, CheckCircle, XCircle, Check, MessageCircle, Star } from 'lucide-react';
 import ClickableAvatar from '@/components/ClickableAvatar';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
