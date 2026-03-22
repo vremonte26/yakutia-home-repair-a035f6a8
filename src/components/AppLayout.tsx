@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, PlusCircle, User, Wrench, ClipboardList, Map } from 'lucide-react';
+import { Home, PlusCircle, User, Wrench, ClipboardList, Map, MessageCircle } from 'lucide-react';
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { profile } = useAuth();
