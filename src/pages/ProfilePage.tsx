@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { CategoryBadge } from '@/components/CategoryBadge';
 import { UserRating } from '@/components/UserRating';
 import { LogOut, ArrowLeftRight, MapPin, Phone, Clock, X, Trash2, Pencil, Camera, Check } from 'lucide-react';
+import ClickableAvatar from '@/components/ClickableAvatar';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import {
