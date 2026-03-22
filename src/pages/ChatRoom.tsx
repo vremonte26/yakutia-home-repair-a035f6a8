@@ -249,7 +249,8 @@ export default function ChatRoom() {
 
     setUploading(true);
     const ext = file.name.split('.').pop() || 'jpg';
-    const filePath = `${taskId}/${user.id}_${Date.now()}.${ext}`;
+    const rand = Math.random().toString(36).substring(2, 8);
+    const filePath = `${taskId}/${user.id}_${Date.now()}_${rand}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from('chat-images')
@@ -261,14 +262,12 @@ export default function ChatRoom() {
       return;
     }
 
-    const { data: urlData } = supabase.storage
-      .from('chat-images')
-      .getPublicUrl(filePath);
-
-    await sendMessage(null, urlData.publicUrl);
+    // Store the file path (not a public URL) — signed URLs are generated on display
+    await sendMessage(null, filePath);
+    // Pre-resolve the signed URL for immediate display
+    await resolveSignedUrls([{ image_url: filePath } as Message]);
     setUploading(false);
 
-    // Reset file input
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
