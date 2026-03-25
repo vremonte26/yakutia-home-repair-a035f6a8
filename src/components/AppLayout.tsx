@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, PlusCircle, User, Wrench, ClipboardList, Map, MessageCircle } from 'lucide-react';
+import { NotificationBell } from '@/components/NotificationBell';
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { profile } = useAuth();
@@ -35,11 +36,14 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </div>
             <span className="font-extrabold text-lg">Времонте</span>
           </Link>
-          {profile && (
-            <span className="text-xs px-2 py-1 rounded-full bg-accent text-accent-foreground font-medium">
-              {isMaster ? '🔧 Мастер' : '👤 Клиент'}
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {profile && <NotificationBell />}
+            {profile && (
+              <span className="text-xs px-2 py-1 rounded-full bg-accent text-accent-foreground font-medium">
+                {isMaster ? '🔧 Мастер' : '👤 Клиент'}
+              </span>
+            )}
+          </div>
         </div>
       </header>
 
