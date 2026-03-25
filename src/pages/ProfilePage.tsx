@@ -49,7 +49,13 @@ export default function ProfilePage() {
 
   const isMaster = profile.role === 'master';
 
+  const isVerifiedMaster = isMaster && profile.is_verified === true;
+
   const startEditing = () => {
+    if (isVerifiedMaster) {
+      toast({ title: 'Данные подтверждены модератором. Для изменений обратитесь в поддержку', variant: 'destructive' });
+      return;
+    }
     setEditName(profile.name || '');
     setIsEditing(true);
   };
@@ -85,8 +91,8 @@ export default function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
-    if (profile?.is_photo_moderated) {
-      toast({ title: 'Фото можно изменить только через повторную модерацию. Обратитесь в поддержку.', variant: 'destructive' });
+    if (profile?.is_photo_moderated || (isMaster && profile?.is_verified === true)) {
+      toast({ title: 'Данные подтверждены модератором. Для изменений обратитесь в поддержку', variant: 'destructive' });
       return;
     }
 
@@ -212,7 +218,7 @@ export default function ProfilePage() {
           <div className="flex items-center gap-4">
             <div className="relative group">
               <ClickableAvatar src={profile.photo} name={profile.name} size="lg" />
-              {!profile.is_photo_moderated && (
+              {!isVerifiedMaster && !profile.is_photo_moderated && (
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
@@ -250,9 +256,11 @@ export default function ProfilePage() {
               ) : (
                 <div className="flex items-center gap-2">
                   <h2 className="font-bold text-lg truncate">{profile.name || 'Без имени'}</h2>
-                  <button type="button" onClick={startEditing} className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
-                    <Pencil className="h-4 w-4" />
-                  </button>
+                  {!isVerifiedMaster && (
+                    <button type="button" onClick={startEditing} className="text-muted-foreground hover:text-foreground transition-colors shrink-0">
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               )}
               <Badge variant={isMaster ? 'default' : 'secondary'}>
