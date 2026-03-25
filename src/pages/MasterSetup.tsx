@@ -26,6 +26,25 @@ export default function MasterSetup() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Block verified masters from editing setup
+  if (profile?.is_verified === true) {
+    return (
+      <div className="p-6 text-center space-y-4">
+        <Card>
+          <CardContent className="p-6 space-y-2">
+            <CardTitle className="text-lg">Данные подтверждены</CardTitle>
+            <CardDescription>
+              Ваш профиль мастера подтверждён модератором. Для изменения данных обратитесь в поддержку.
+            </CardDescription>
+            <Button variant="outline" className="mt-4" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-4 w-4 mr-2" /> Назад
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const toggleCategory = (val: string) => {
     setCategories(prev =>
       prev.includes(val) ? prev.filter(c => c !== val) : [...prev, val]
