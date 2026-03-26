@@ -3,8 +3,7 @@ export const CATEGORIES = [
   { value: 'electrical', label: 'Электрика', icon: '⚡' },
   { value: 'furniture', label: 'Сборка мебели', icon: '🪑' },
   { value: 'minor_repair', label: 'Мелкий ремонт', icon: '🔨' },
-  { value: 'painting', label: 'Покраска', icon: '🎨' },
-  { value: 'tiling', label: 'Плитка', icon: '🧱' },
+  { value: 'finishing', label: 'Отделка', icon: '🎨' },
   { value: 'other', label: 'Другое', icon: '🛠️' },
 ] as const;
 
