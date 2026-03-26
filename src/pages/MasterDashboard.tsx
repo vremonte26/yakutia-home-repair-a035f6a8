@@ -97,7 +97,7 @@ export default function MasterDashboard() {
     };
 
     fetchTasks();
-  }, [filter, user]);
+  }, [filter, user, profile?.work_area]);
 
   const respond = async (taskId: string) => {
     if (!user) return;
