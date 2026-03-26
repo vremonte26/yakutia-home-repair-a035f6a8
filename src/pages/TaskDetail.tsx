@@ -187,11 +187,16 @@ export default function TaskDetail() {
           <CategoryBadge value={task.category} size="sm" />
           {task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            {task.address && (
-              <span className="flex items-center gap-1">
-                <MapPin className="h-3 w-3" /> {task.address}
-              </span>
-            )}
+            {(() => {
+              const isAcceptedMaster = isMaster && acceptedResponse?.master_id === user?.id;
+              const showFull = isOwner || isAcceptedMaster;
+              const addr = showFull ? (task.address_full || task.address) : (task.address_area || task.work_area || task.address);
+              return addr ? (
+                <span className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3" /> {addr}
+                </span>
+              ) : null;
+            })()}
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {formatDistanceToNow(new Date(task.created_at), { addSuffix: true, locale: ru })}

@@ -95,6 +95,8 @@ export default function CreateTask() {
       description,
       category,
       address,
+      address_full: address,
+      address_area: workArea || null,
       lat: coords.lat,
       lng: coords.lng,
       work_area: workArea || null,
