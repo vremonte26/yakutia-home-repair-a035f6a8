@@ -20,10 +20,13 @@ interface TaskCardProps {
     description: string | null;
     category: string;
     address: string | null;
+    address_area?: string | null;
+    address_full?: string | null;
     status: TaskStatus;
     created_at: string;
   };
   clientInfo?: ClientInfo;
+  showFullAddress?: boolean;
   onClick?: () => void;
   children?: React.ReactNode;
 }
@@ -35,7 +38,10 @@ const statusVariant: Record<TaskStatus, 'default' | 'secondary' | 'destructive' 
   cancelled: 'destructive',
 };
 
-export function TaskCard({ task, clientInfo, onClick, children }: TaskCardProps) {
+export function TaskCard({ task, clientInfo, showFullAddress, onClick, children }: TaskCardProps) {
+  const displayAddress = showFullAddress
+    ? (task.address_full || task.address)
+    : (task.address_area || task.address);
   return (
     <Card
       className="cursor-pointer hover:shadow-md transition-shadow animate-fade-in"
@@ -55,10 +61,10 @@ export function TaskCard({ task, clientInfo, onClick, children }: TaskCardProps)
           <p className="text-sm text-muted-foreground line-clamp-2">{task.description}</p>
         )}
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          {task.address && (
+          {displayAddress && (
             <span className="flex items-center gap-1">
               <MapPin className="h-3 w-3" />
-              {task.address}
+              {displayAddress}
             </span>
           )}
           <span className="flex items-center gap-1">
