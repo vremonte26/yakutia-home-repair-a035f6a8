@@ -24,6 +24,7 @@ export default function CreateTask() {
   const [geocoding, setGeocoding] = useState(false);
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [workArea, setWorkArea] = useState('');
 
   const geocodeAddress = async () => {
     if (!address.trim()) return;
@@ -96,7 +97,8 @@ export default function CreateTask() {
       address,
       lat: coords.lat,
       lng: coords.lng,
-    });
+      work_area: workArea || null,
+    } as any);
     setLoading(false);
     if (error) {
       toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
@@ -135,6 +137,20 @@ export default function CreateTask() {
                     <SelectItem key={cat.value} value={cat.value}>
                       {cat.icon} {cat.label}
                     </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Район <span className="text-destructive">*</span></label>
+              <Select value={workArea} onValueChange={setWorkArea} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите район" />
+                </SelectTrigger>
+                <SelectContent>
+                  {WORK_AREAS.map(area => (
+                    <SelectItem key={area} value={area}>{area}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
