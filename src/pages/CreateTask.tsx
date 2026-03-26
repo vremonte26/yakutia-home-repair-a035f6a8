@@ -194,7 +194,7 @@ export default function CreateTask() {
               )}
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading || !category || geocoding}>
+            <Button type="submit" className="w-full" disabled={loading || !category || !workArea || geocoding}>
               {loading ? 'Создание...' : 'Создать заказ'}
             </Button>
           </form>

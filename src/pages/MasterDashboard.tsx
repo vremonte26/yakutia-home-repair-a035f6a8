@@ -23,6 +23,8 @@ export default function MasterDashboard() {
     const fetchTasks = async () => {
       if (!user) return;
 
+      const masterWorkArea = profile?.work_area;
+
       let query = supabase
         .from('tasks')
         .select('*')
@@ -31,6 +33,10 @@ export default function MasterDashboard() {
 
       if (filter) {
         query = query.eq('category', filter);
+      }
+
+      if (masterWorkArea) {
+        query = query.eq('work_area', masterWorkArea);
       }
 
       const { data: tasksData } = await query;
