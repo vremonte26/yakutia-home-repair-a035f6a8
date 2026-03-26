@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CATEGORIES, WORK_AREAS } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CATEGORIES } from '@/lib/constants';
+
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Check, Loader2 } from 'lucide-react';
@@ -23,6 +24,7 @@ export default function CreateTask() {
   const [geocoding, setGeocoding] = useState(false);
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [workArea, setWorkArea] = useState('');
 
   const geocodeAddress = async () => {
     if (!address.trim()) return;
@@ -95,7 +97,8 @@ export default function CreateTask() {
       address,
       lat: coords.lat,
       lng: coords.lng,
-    });
+      work_area: workArea || null,
+    } as any);
     setLoading(false);
     if (error) {
       toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
@@ -140,6 +143,20 @@ export default function CreateTask() {
             </div>
 
             <div className="space-y-2">
+              <label className="text-sm font-medium">Район <span className="text-destructive">*</span></label>
+              <Select value={workArea} onValueChange={setWorkArea} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите район" />
+                </SelectTrigger>
+                <SelectContent>
+                  {WORK_AREAS.map(area => (
+                    <SelectItem key={area} value={area}>{area}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <label className="text-sm font-medium">Описание</label>
               <Textarea
                 placeholder="Опишите задачу подробнее..."
@@ -177,7 +194,7 @@ export default function CreateTask() {
               )}
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading || !category || geocoding}>
+            <Button type="submit" className="w-full" disabled={loading || !category || !workArea || geocoding}>
               {loading ? 'Создание...' : 'Создать заказ'}
             </Button>
           </form>
