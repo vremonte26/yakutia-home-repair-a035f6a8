@@ -81,6 +81,7 @@ export default function ClientDashboard() {
               <TaskCard
                 key={task.id}
                 task={task}
+                showFullAddress
                 onClick={() => navigate(`/task/${task.id}`)}
               >
                 {count > 0 && (
