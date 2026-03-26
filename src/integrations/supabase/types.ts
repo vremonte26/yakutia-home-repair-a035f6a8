@@ -296,6 +296,8 @@ export type Database = {
       tasks: {
         Row: {
           address: string | null
+          address_area: string | null
+          address_full: string | null
           category: string
           client_id: string
           created_at: string
@@ -310,6 +312,8 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          address_area?: string | null
+          address_full?: string | null
           category: string
           client_id: string
           created_at?: string
@@ -324,6 +328,8 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          address_area?: string | null
+          address_full?: string | null
           category?: string
           client_id?: string
           created_at?: string
