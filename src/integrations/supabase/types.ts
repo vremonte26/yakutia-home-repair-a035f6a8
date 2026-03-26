@@ -306,6 +306,7 @@ export type Database = {
           status: Database["public"]["Enums"]["task_status"]
           title: string
           updated_at: string
+          work_area: string | null
         }
         Insert: {
           address?: string | null
@@ -319,6 +320,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["task_status"]
           title: string
           updated_at?: string
+          work_area?: string | null
         }
         Update: {
           address?: string | null
@@ -332,6 +334,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["task_status"]
           title?: string
           updated_at?: string
+          work_area?: string | null
         }
         Relationships: [
           {
