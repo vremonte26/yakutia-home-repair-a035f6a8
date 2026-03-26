@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { MapPin, Navigation } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 
 declare global {
   interface Window {
@@ -23,20 +23,6 @@ interface TaskMapProps {
   mode: 'master' | 'client';
 }
 
-const AREAS: { label: string; lat: number; lng: number }[] = [
-  { label: 'Якутск — центр', lat: 62.0355, lng: 129.6755 },
-  { label: 'Якутск — Залог', lat: 62.0150, lng: 129.6800 },
-  { label: 'Якутск — ДСК', lat: 62.0560, lng: 129.7300 },
-  { label: 'Якутск — Сайсары', lat: 62.0280, lng: 129.7100 },
-  { label: 'Якутск — Птицефабрика', lat: 62.0750, lng: 129.6200 },
-  { label: 'Якутск — Марха', lat: 62.0900, lng: 129.5500 },
-  { label: 'Якутск — Жатай', lat: 62.1500, lng: 129.8200 },
-  { label: 'Якутск — Гагарина', lat: 62.0400, lng: 129.7200 },
-  { label: 'Якутск — Строительный', lat: 62.0480, lng: 129.6400 },
-  { label: 'Нерюнгри', lat: 56.6574, lng: 124.7131 },
-  { label: 'Мирный', lat: 62.5354, lng: 113.9610 },
-  { label: 'Алдан', lat: 58.6077, lng: 125.3891 },
-];
 
 function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371;
@@ -111,15 +97,6 @@ export function TaskMap({ mode }: TaskMapProps) {
     );
   }, []);
 
-  const selectArea = useCallback((areaLabel: string) => {
-    const area = AREAS.find(a => a.label === areaLabel);
-    if (area) {
-      console.log(`[TaskMap] Выбран район: ${area.label} (${area.lat}, ${area.lng})`);
-      setCenter({ lat: area.lat, lng: area.lng });
-      setShowUserPin(false);
-      setGeoState('granted');
-    }
-  }, []);
 
   // Initialize map when center is set
   useEffect(() => {
@@ -298,30 +275,17 @@ export function TaskMap({ mode }: TaskMapProps) {
     );
   }
 
-  // Denied / Error — manual area selection
+  // Denied / Error
   if (geoState === 'denied' || geoState === 'error') {
     return (
       <div className="w-full rounded-xl border bg-card flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ height: 400 }}>
         <MapPin className="h-10 w-10 text-muted-foreground" />
-        <div>
-          {geoState === 'denied' ? (
-            <p className="text-sm text-muted-foreground">Без геолокации карта не может показать заказы рядом. Вы можете выбрать район вручную</p>
-          ) : (
-            <p className="text-sm text-destructive">{geoError}</p>
-          )}
-        </div>
-        <Select onValueChange={selectArea}>
-          <SelectTrigger className="w-64">
-            <SelectValue placeholder="Выберите район" />
-          </SelectTrigger>
-          <SelectContent>
-            {AREAS.map(a => (
-              <SelectItem key={a.label} value={a.label}>{a.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button variant="ghost" size="sm" onClick={requestGeolocation}>
-          Попробовать геолокацию снова
+        <p className="text-sm text-muted-foreground max-w-xs">
+          Для работы карты нужно ваше местоположение. Разрешите доступ к геолокации в настройках браузера.
+        </p>
+        {geoError && <p className="text-xs text-destructive">{geoError}</p>}
+        <Button variant="outline" size="sm" onClick={requestGeolocation}>
+          Попробовать снова
         </Button>
       </div>
     );
