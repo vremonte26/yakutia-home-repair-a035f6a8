@@ -47,14 +47,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    initOneSignal();
+  }, []);
+
+  useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
           setTimeout(() => fetchProfile(session.user.id), 0);
+          setOneSignalExternalUserId(session.user.id);
+          promptPushPermission();
         } else {
           setProfile(null);
+          removeOneSignalExternalUserId();
         }
         setLoading(false);
       }
@@ -65,6 +72,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchProfile(session.user.id);
+        setOneSignalExternalUserId(session.user.id);
+        promptPushPermission();
       }
       setLoading(false);
     });
