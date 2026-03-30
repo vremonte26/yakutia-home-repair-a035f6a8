@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { initOneSignal, promptPushPermission, setOneSignalExternalUserId, removeOneSignalExternalUserId } from '@/lib/onesignal';
 
 export interface Profile {
   id: string;
