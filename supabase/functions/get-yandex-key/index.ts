@@ -38,6 +38,7 @@ Deno.serve(async (req) => {
     }
 
     const apiKey = Deno.env.get("YANDEX_MAPS_API_KEY");
+    console.log("[get-yandex-key] API key present:", !!apiKey, "prefix:", apiKey?.slice(0, 4) ?? "N/A");
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "API key not configured" }), {
         status: 500,
