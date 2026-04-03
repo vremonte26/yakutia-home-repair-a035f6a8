@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    const { data: { user }, error } = await supabase.auth.getUser();
     if (error || !user) {
       console.log("[get-yandex-key] Auth failed:", error?.message);
       return new Response(JSON.stringify({ error: "Invalid token" }), {
