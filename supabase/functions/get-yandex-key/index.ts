@@ -6,6 +6,8 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
+  console.log("[get-yandex-key] Function invoked, method:", req.method);
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -26,16 +28,18 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data, error } = await supabase.auth.getClaims(token);
-    if (error || !data?.claims) {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) {
+      console.log("[get-yandex-key] Auth failed:", error?.message);
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    console.log("[get-yandex-key] Authenticated user:", user.id);
 
     const apiKey = Deno.env.get("YANDEX_MAPS_API_KEY");
+    console.log("[get-yandex-key] API key present:", !!apiKey, "prefix:", apiKey?.slice(0, 4) ?? "N/A");
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "API key not configured" }), {
         status: 500,
