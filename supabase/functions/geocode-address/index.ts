@@ -58,6 +58,18 @@ Deno.serve(async (req) => {
 
     const { address } = await req.json();
     console.log("[geocode-address] address:", address);
+
+    // Extract street name from user input (remove city prefixes, house numbers, apt numbers)
+    const extractUserStreet = (input: string): string => {
+      let s = input.trim().toLowerCase();
+      // Remove common city prefixes
+      s = s.replace(/^(г\.?\s*)?якутск[,\s]*/i, "");
+      // Remove "ул.", "улица", "пр.", "проспект", "пер.", "переулок" prefixes
+      s = s.replace(/^(ул\.?|улица|пр\.?|проспект|пер\.?|переулок|ш\.?|шоссе)\s*/i, "");
+      // Remove house number and everything after (digits, letters like "а", "б", apt/kv)
+      s = s.replace(/\s+\d+.*$/i, "");
+      return s.trim();
+    };
     if (!address || typeof address !== "string") {
       return new Response(JSON.stringify({ error: "Address is required" }), {
         status: 400,
