@@ -12,7 +12,9 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
+    console.log("[geocode-address] authHeader present:", !!authHeader);
     if (!authHeader?.startsWith("Bearer ")) {
+      console.error("[geocode-address] Missing or invalid Authorization header");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -26,6 +28,7 @@ Deno.serve(async (req) => {
     });
 
     const { data: { user }, error } = await supabase.auth.getUser();
+    console.log("[geocode-address] user:", user?.id, "error:", error?.message);
     if (error || !user) {
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
@@ -34,6 +37,7 @@ Deno.serve(async (req) => {
     }
 
     const apiKey = Deno.env.get("YANDEX_MAPS_API_KEY");
+    console.log("[geocode-address] YANDEX_MAPS_API_KEY present:", !!apiKey);
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "API key not configured" }), {
         status: 500,
@@ -42,6 +46,7 @@ Deno.serve(async (req) => {
     }
 
     const { address } = await req.json();
+    console.log("[geocode-address] address:", address);
     if (!address || typeof address !== "string") {
       return new Response(JSON.stringify({ error: "Address is required" }), {
         status: 400,
@@ -50,11 +55,14 @@ Deno.serve(async (req) => {
     }
 
     const geocodeUrl = `https://geocode-maps.yandex.ru/1.x/?apikey=${apiKey}&geocode=${encodeURIComponent(address)}&format=json&results=1`;
+    console.log("[geocode-address] calling Yandex geocoder for:", address);
     const geoRes = await fetch(geocodeUrl);
     const geoData = await geoRes.json();
+    console.log("[geocode-address] Yandex status:", geoRes.status, "found:", geoData?.response?.GeoObjectCollection?.metaDataProperty?.GeocoderResponseMetaData?.found);
 
     const found = geoData?.response?.GeoObjectCollection?.featureMember?.[0]?.GeoObject;
     if (!found) {
+      console.error("[geocode-address] Address not found in Yandex response");
       return new Response(JSON.stringify({ error: "Address not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -64,11 +72,13 @@ Deno.serve(async (req) => {
     const [lngStr, latStr] = found.Point.pos.split(" ");
     const lat = parseFloat(parseFloat(latStr).toFixed(5));
     const lng = parseFloat(parseFloat(lngStr).toFixed(5));
+    console.log("[geocode-address] result: lat=", lat, "lng=", lng);
 
     return new Response(JSON.stringify({ lat, lng }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
+    console.error("[geocode-address] unhandled error:", err.message, err.stack);
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

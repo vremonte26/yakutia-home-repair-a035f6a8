@@ -32,18 +32,26 @@ export default function CreateTask() {
     setGeocodeError(null);
     setCoords(null);
 
+    console.log('[CreateTask] geocodeAddress called, address:', address.trim());
+
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
+      console.log('[CreateTask] session token present:', !!token);
       if (!token) throw new Error('No session');
 
+      console.log('[CreateTask] invoking geocode-address edge function...');
       const res = await supabase.functions.invoke('geocode-address', {
         body: { address: address.trim() },
         headers: { Authorization: `Bearer ${token}` },
       });
 
+      console.log('[CreateTask] geocode-address response:', JSON.stringify(res.data));
+      console.log('[CreateTask] geocode-address error:', res.error);
+
       if (res.error || res.data?.error) {
         const msg = res.data?.error || res.error?.message;
+        console.error('[CreateTask] geocode error:', msg);
         if (msg === 'Address not found') {
           setGeocodeError('Не удалось определить координаты. Уточните адрес');
         } else {
@@ -52,8 +60,10 @@ export default function CreateTask() {
         return;
       }
 
+      console.log('[CreateTask] coords received:', res.data.lat, res.data.lng);
       setCoords({ lat: res.data.lat, lng: res.data.lng });
     } catch (err: any) {
+      console.error('[CreateTask] geocode exception:', err);
       setGeocodeError(err.message || 'Ошибка геокодирования');
     } finally {
       setGeocoding(false);
