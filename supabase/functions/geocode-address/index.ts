@@ -163,6 +163,33 @@ Deno.serve(async (req) => {
       });
     }
 
+    // 4. Check street name matches user input
+    const userStreet = extractUserStreet(address);
+    const foundStreetLower = foundStreetName.toLowerCase();
+    // Remove common prefixes from found street too ("улица ", "проспект ", etc.)
+    const foundStreetClean = foundStreetLower
+      .replace(/^(улица|проспект|переулок|шоссе|бульвар|площадь|набережная|проезд|тупик)\s+/i, "")
+      .trim();
+
+    const streetMatch = userStreet.length > 0 && foundStreetClean.length > 0 &&
+      (foundStreetClean === userStreet || foundStreetClean.includes(userStreet) || userStreet.includes(foundStreetClean));
+
+    console.log("[geocode-address] userStreet:", userStreet, "foundStreetClean:", foundStreetClean, "match:", streetMatch);
+
+    if (userStreet.length > 0 && foundStreetClean.length > 0 && !streetMatch) {
+      console.error("[geocode-address] Rejected: street mismatch, user:", userStreet, "found:", foundStreetName);
+      return new Response(JSON.stringify({
+        error: "street_mismatch",
+        message: `Улица не найдена. Возможно, вы имели в виду: «${foundStreetName}»`,
+        userStreet,
+        foundStreet: foundStreetName,
+        fullAddress,
+      }), {
+        status: 422,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(JSON.stringify({ lat, lng, fullAddress }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
