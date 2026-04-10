@@ -50,14 +50,15 @@ export default function CreateTask() {
       console.log('[CreateTask] geocode-address error:', res.error);
 
       if (res.error || res.data?.error) {
-        const msg = res.data?.error || res.error?.message;
-        console.error('[CreateTask] geocode error:', msg);
-        if (msg === 'low_precision') {
-          setGeocodeError('Адрес не распознан. Уточните название улицы и номер дома');
-        } else if (msg === 'Address not found') {
+        const errCode = res.data?.error;
+        const errMsg = res.data?.message;
+        console.error('[CreateTask] geocode error:', errCode, errMsg);
+        if (errMsg) {
+          setGeocodeError(errMsg);
+        } else if (errCode === 'Address not found') {
           setGeocodeError('Не удалось определить координаты. Уточните адрес');
         } else {
-          setGeocodeError(msg || 'Ошибка геокодирования');
+          setGeocodeError(errCode || res.error?.message || 'Ошибка геокодирования');
         }
         return;
       }
