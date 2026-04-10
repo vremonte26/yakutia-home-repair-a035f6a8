@@ -69,12 +69,39 @@ Deno.serve(async (req) => {
       });
     }
 
-    const precision = found.metaDataProperty?.GeocoderMetaData?.precision;
-    console.log("[geocode-address] precision:", precision);
-    const allowedPrecisions = ["exact", "number", "near", "house", "street"];
+    const geocoderMeta = found.metaDataProperty?.GeocoderMetaData;
+    const precision = geocoderMeta?.precision;
+    const kind = geocoderMeta?.kind;
+    console.log("[geocode-address] kind:", kind, "precision:", precision);
+
+    // 1. kind must be "house"
+    if (kind === "street") {
+      console.error("[geocode-address] Rejected: kind=street, need house number");
+      return new Response(JSON.stringify({ error: "no_house_number", message: "Укажите номер дома", kind, precision }), {
+        status: 422,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (kind === "locality" || kind === "province" || kind === "country" || kind === "district") {
+      console.error("[geocode-address] Rejected: kind=", kind);
+      return new Response(JSON.stringify({ error: "too_broad", message: "Адрес слишком общий. Укажите улицу и номер дома", kind, precision }), {
+        status: 422,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (kind !== "house") {
+      console.error("[geocode-address] Rejected: unexpected kind=", kind);
+      return new Response(JSON.stringify({ error: "invalid_kind", message: "Адрес не распознан. Уточните адрес", kind, precision }), {
+        status: 422,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // 2. precision must be exact, number, or near
+    const allowedPrecisions = ["exact", "number", "near"];
     if (!precision || !allowedPrecisions.includes(precision)) {
-      console.error("[geocode-address] Low precision:", precision);
-      return new Response(JSON.stringify({ error: "low_precision", precision }), {
+      console.error("[geocode-address] Rejected: low precision=", precision);
+      return new Response(JSON.stringify({ error: "low_precision", message: "Адрес найден неточно. Уточните номер дома", kind, precision }), {
         status: 422,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
