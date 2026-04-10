@@ -58,6 +58,18 @@ Deno.serve(async (req) => {
 
     const { address } = await req.json();
     console.log("[geocode-address] address:", address);
+
+    // Extract street name from user input (remove city prefixes, house numbers, apt numbers)
+    const extractUserStreet = (input: string): string => {
+      let s = input.trim().toLowerCase();
+      // Remove common city prefixes
+      s = s.replace(/^(г\.?\s*)?якутск[,\s]*/i, "");
+      // Remove "ул.", "улица", "пр.", "проспект", "пер.", "переулок" prefixes
+      s = s.replace(/^(ул\.?|улица|пр\.?|проспект|пер\.?|переулок|ш\.?|шоссе)\s*/i, "");
+      // Remove house number and everything after (digits, letters like "а", "б", apt/kv)
+      s = s.replace(/\s+\d+.*$/i, "");
+      return s.trim();
+    };
     if (!address || typeof address !== "string") {
       return new Response(JSON.stringify({ error: "Address is required" }), {
         status: 400,
@@ -84,14 +96,20 @@ Deno.serve(async (req) => {
     const fullAddress = geocoderMeta?.text || found.name || "";
     const addressComponents = geocoderMeta?.Address?.Components || [];
 
-    // Extract city from components
+    // Extract street and city from components
     const cityComponent = addressComponents.find(
       (c: any) => c.kind === "locality"
     );
     const cityName = cityComponent?.name || "";
 
+    const streetComponent = addressComponents.find(
+      (c: any) => c.kind === "street"
+    );
+    const foundStreetName = streetComponent?.name || "";
+
     console.log("[geocode-address] fullAddress:", fullAddress);
     console.log("[geocode-address] city:", cityName, "kind:", kind, "precision:", precision);
+    console.log("[geocode-address] foundStreet:", foundStreetName);
 
     // 1. kind must be "house"
     if (kind === "street") {
@@ -139,6 +157,33 @@ Deno.serve(async (req) => {
         fullAddress,
         cityName,
         distKm: Math.round(distKm),
+      }), {
+        status: 422,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // 4. Check street name matches user input
+    const userStreet = extractUserStreet(address);
+    const foundStreetLower = foundStreetName.toLowerCase();
+    // Remove common prefixes from found street too ("улица ", "проспект ", etc.)
+    const foundStreetClean = foundStreetLower
+      .replace(/^(улица|проспект|переулок|шоссе|бульвар|площадь|набережная|проезд|тупик)\s+/i, "")
+      .trim();
+
+    const streetMatch = userStreet.length > 0 && foundStreetClean.length > 0 &&
+      (foundStreetClean === userStreet || foundStreetClean.includes(userStreet) || userStreet.includes(foundStreetClean));
+
+    console.log("[geocode-address] userStreet:", userStreet, "foundStreetClean:", foundStreetClean, "match:", streetMatch);
+
+    if (userStreet.length > 0 && foundStreetClean.length > 0 && !streetMatch) {
+      console.error("[geocode-address] Rejected: street mismatch, user:", userStreet, "found:", foundStreetName);
+      return new Response(JSON.stringify({
+        error: "street_mismatch",
+        message: `Улица не найдена. Возможно, вы имели в виду: «${foundStreetName}»`,
+        userStreet,
+        foundStreet: foundStreetName,
+        fullAddress,
       }), {
         status: 422,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
