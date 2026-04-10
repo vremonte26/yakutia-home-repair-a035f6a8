@@ -202,7 +202,10 @@ export default function CreateTask() {
                 <p className="text-xs text-destructive">{geocodeError}</p>
               )}
               {coords && (
-                <p className="text-xs text-muted-foreground">📍 Координаты определены</p>
+                <p className="text-xs text-green-600 font-medium">✅ Координаты получены: lat={coords.lat}, lng={coords.lng}</p>
+              )}
+              {geocodeError && (
+                <p className="text-xs text-destructive font-medium">❌ Ошибка геокодирования: {geocodeError}</p>
               )}
             </div>
 
