@@ -96,14 +96,20 @@ Deno.serve(async (req) => {
     const fullAddress = geocoderMeta?.text || found.name || "";
     const addressComponents = geocoderMeta?.Address?.Components || [];
 
-    // Extract city from components
+    // Extract street and city from components
     const cityComponent = addressComponents.find(
       (c: any) => c.kind === "locality"
     );
     const cityName = cityComponent?.name || "";
 
+    const streetComponent = addressComponents.find(
+      (c: any) => c.kind === "street"
+    );
+    const foundStreetName = streetComponent?.name || "";
+
     console.log("[geocode-address] fullAddress:", fullAddress);
     console.log("[geocode-address] city:", cityName, "kind:", kind, "precision:", precision);
+    console.log("[geocode-address] foundStreet:", foundStreetName);
 
     // 1. kind must be "house"
     if (kind === "street") {
