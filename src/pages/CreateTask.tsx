@@ -60,7 +60,7 @@ export default function CreateTask() {
         return;
       }
 
-      console.log('[CreateTask] coords received:', res.data.lat, res.data.lng);
+      console.log(`Координаты получены: lat=${res.data.lat}, lng=${res.data.lng}`);
       setCoords({ lat: res.data.lat, lng: res.data.lng });
     } catch (err: any) {
       console.error('[CreateTask] geocode exception:', err);
