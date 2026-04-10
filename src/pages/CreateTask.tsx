@@ -52,7 +52,9 @@ export default function CreateTask() {
       if (res.error || res.data?.error) {
         const msg = res.data?.error || res.error?.message;
         console.error('[CreateTask] geocode error:', msg);
-        if (msg === 'Address not found') {
+        if (msg === 'low_precision') {
+          setGeocodeError('Адрес не распознан. Уточните название улицы и номер дома');
+        } else if (msg === 'Address not found') {
           setGeocodeError('Не удалось определить координаты. Уточните адрес');
         } else {
           setGeocodeError(msg || 'Ошибка геокодирования');

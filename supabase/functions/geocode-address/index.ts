@@ -69,6 +69,17 @@ Deno.serve(async (req) => {
       });
     }
 
+    const precision = found.metaDataProperty?.GeocoderMetaData?.precision;
+    console.log("[geocode-address] precision:", precision);
+    const allowedPrecisions = ["exact", "number", "near", "house", "street"];
+    if (!precision || !allowedPrecisions.includes(precision)) {
+      console.error("[geocode-address] Low precision:", precision);
+      return new Response(JSON.stringify({ error: "low_precision", precision }), {
+        status: 422,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const [lngStr, latStr] = found.Point.pos.split(" ");
     const lat = parseFloat(parseFloat(latStr).toFixed(5));
     const lng = parseFloat(parseFloat(lngStr).toFixed(5));
