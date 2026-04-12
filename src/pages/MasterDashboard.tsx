@@ -252,17 +252,17 @@ export default function MasterDashboard() {
           )}
           <Button
             variant="outline"
-            size="icon"
+            size="sm"
             onClick={handleGeoRefresh}
             disabled={geoLoading}
-            className="h-9 w-9 shrink-0"
-            title="Обновить по геопозиции"
+            className="shrink-0 gap-1.5"
           >
             {geoLoading ? (
               <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
             ) : (
               <LocateFixed className="h-4 w-4" />
             )}
+            <span className="text-xs">Обновить ленту</span>
           </Button>
         </div>
       </div>
