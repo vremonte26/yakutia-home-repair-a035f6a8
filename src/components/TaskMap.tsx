@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { MapPin, Navigation } from 'lucide-react';
+import { MapPin, Navigation, Locate } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { Map, Marker } from '@2gis/mapgl/types';
 
 const DGIS_API_KEY = 'f36bed16-b4cb-48a6-8b12-541f54023ec7';
@@ -253,6 +254,41 @@ export function TaskMap({ mode }: TaskMapProps) {
     );
   }
 
+  const handleLocateMe = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast({ title: 'Не удалось определить ваше местоположение. Проверьте настройки геолокации в браузере.', variant: 'destructive' });
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const map = mapInstanceRef.current;
+        const mapglAPI = (window as any).mapgl;
+        if (map && mapglAPI) {
+          map.setCenter([longitude, latitude]);
+          map.setZoom(15);
+          // Update or create user marker
+          if (userMarkerRef.current) {
+            try { userMarkerRef.current.destroy(); } catch {}
+          }
+          const marker = new mapglAPI.Marker(map, {
+            coordinates: [longitude, latitude],
+            icon: 'data:image/svg+xml,' + encodeURIComponent(
+              `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="8" fill="#3b82f6" stroke="white" stroke-width="3"/></svg>`
+            ),
+            size: [20, 20],
+            anchor: [10, 10],
+          });
+          userMarkerRef.current = marker;
+        }
+      },
+      () => {
+        toast({ title: 'Не удалось определить ваше местоположение. Проверьте настройки геолокации в браузере.', variant: 'destructive' });
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, [toast]);
+
   return (
     <div className="relative w-full rounded-xl overflow-hidden border" style={{ height: 400 }}>
       {loading && (
@@ -261,6 +297,15 @@ export function TaskMap({ mode }: TaskMapProps) {
         </div>
       )}
       <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
+      {!loading && mapInstanceRef.current && (
+        <button
+          onClick={handleLocateMe}
+          className="absolute top-3 right-3 z-20 bg-white rounded-lg shadow-md p-2 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+          title="Моё местоположение"
+        >
+          <Locate className="h-5 w-5 text-primary" />
+        </button>
+      )}
     </div>
   );
 }
