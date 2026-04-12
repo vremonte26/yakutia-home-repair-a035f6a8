@@ -225,11 +225,7 @@ export default function MasterDashboard() {
 
   const handleResetGeo = () => {
     setGeoActive(false);
-    setLoading(true);
-    // re-trigger the normal fetch
-    setFilter(prev => prev);
-    // force re-fetch by toggling a dummy state — just call the effect
-    window.dispatchEvent(new Event('geo-reset'));
+    setRefreshKey(k => k + 1);
   };
 
   if (!profile?.is_verified) {
