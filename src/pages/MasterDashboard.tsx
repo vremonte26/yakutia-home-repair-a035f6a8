@@ -147,6 +147,90 @@ export default function MasterDashboard() {
     toast({ title: 'Отклик отправлен!' });
   };
 
+  const handleGeoRefresh = useCallback(async () => {
+    if (!navigator.geolocation) {
+      toast({ title: 'Геолокация не поддерживается вашим браузером', variant: 'destructive' });
+      return;
+    }
+    setGeoLoading(true);
+    try {
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
+      );
+      const { latitude, longitude } = pos.coords;
+
+      let query = supabase
+        .from('tasks')
+        .select('*')
+        .eq('status', 'open')
+        .not('lat', 'is', null)
+        .not('lng', 'is', null)
+        .order('created_at', { ascending: false });
+
+      if (filter) query = query.eq('category', filter);
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      const nearby = (data ?? []).filter(t =>
+        haversineKm(latitude, longitude, t.lat!, t.lng!) <= 50
+      );
+
+      setTasks(nearby);
+      setGeoActive(true);
+
+      if (nearby.length === 0) {
+        toast({ title: 'В этом районе пока нет заказов' });
+      } else {
+        toast({ title: `Найдено ${nearby.length} заказов рядом` });
+      }
+
+      // refresh auxiliary data for nearby tasks
+      if (nearby.length > 0) {
+        const taskIds = nearby.map(t => t.id);
+        const [{ data: myResp }, { data: allResp }] = await Promise.all([
+          supabase.from('responses').select('task_id').eq('master_id', user!.id),
+          supabase.from('responses').select('task_id').in('task_id', taskIds).neq('status', 'rejected'),
+        ]);
+        setRespondedTaskIds(new Set((myResp ?? []).map(r => r.task_id)));
+        const counts: Record<string, number> = {};
+        (allResp ?? []).forEach(r => { counts[r.task_id] = (counts[r.task_id] || 0) + 1; });
+        setResponseCounts(counts);
+
+        const clientIds = [...new Set(nearby.map(t => t.client_id))];
+        const [{ data: profs }, { data: revs }] = await Promise.all([
+          supabase.from('profiles').select('id, name, rating').in('id', clientIds),
+          supabase.from('reviews').select('to_user').in('to_user', clientIds),
+        ]);
+        const pm: Record<string, { name: string; rating: number | null }> = {};
+        (profs ?? []).forEach((p: any) => { pm[p.id] = { name: p.name, rating: p.rating }; });
+        setClientProfiles(pm);
+        const rc: Record<string, number> = {};
+        (revs ?? []).forEach((r: any) => { rc[r.to_user] = (rc[r.to_user] || 0) + 1; });
+        setClientReviewCounts(rc);
+      }
+    } catch (err: any) {
+      if (err?.code === 1) {
+        toast({ title: 'Не удалось определить местоположение', description: 'Разрешите доступ к геолокации в настройках браузера', variant: 'destructive' });
+      } else if (err?.code === 2 || err?.code === 3) {
+        toast({ title: 'Не удалось определить местоположение', description: 'Проверьте подключение к интернету и настройки геолокации', variant: 'destructive' });
+      } else {
+        toast({ title: 'Ошибка при загрузке заказов', description: err?.message || 'Попробуйте позже', variant: 'destructive' });
+      }
+    } finally {
+      setGeoLoading(false);
+    }
+  }, [filter, user, toast]);
+
+  const handleResetGeo = () => {
+    setGeoActive(false);
+    setLoading(true);
+    // re-trigger the normal fetch
+    setFilter(prev => prev);
+    // force re-fetch by toggling a dummy state — just call the effect
+    window.dispatchEvent(new Event('geo-reset'));
+  };
+
   if (!profile?.is_verified) {
     return (
       <div className="text-center py-20 space-y-3 animate-fade-in">
@@ -161,7 +245,30 @@ export default function MasterDashboard() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <h1 className="text-xl font-extrabold">Доступные заказы</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-extrabold">Доступные заказы</h1>
+        <div className="flex items-center gap-2">
+          {geoActive && (
+            <Button variant="ghost" size="sm" onClick={handleResetGeo} className="text-xs text-muted-foreground">
+              Сбросить
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleGeoRefresh}
+            disabled={geoLoading}
+            className="h-9 w-9 shrink-0"
+            title="Обновить по геопозиции"
+          >
+            {geoLoading ? (
+              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+            ) : (
+              <LocateFixed className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1">
         <Badge
