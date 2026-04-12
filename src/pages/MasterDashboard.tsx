@@ -37,7 +37,20 @@ export default function MasterDashboard() {
     const fetchTasks = async () => {
       if (!user) return;
 
-      const masterWorkArea = profile?.work_area;
+      // By default, use geolocation to load nearby tasks
+      let useGeo = true;
+      let userLat = 0;
+      let userLng = 0;
+
+      try {
+        const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
+        );
+        userLat = pos.coords.latitude;
+        userLng = pos.coords.longitude;
+      } catch {
+        useGeo = false;
+      }
 
       let query = supabase
         .from('tasks')
@@ -49,12 +62,15 @@ export default function MasterDashboard() {
         query = query.eq('category', filter);
       }
 
-      if (masterWorkArea) {
-        query = query.eq('work_area', masterWorkArea);
-      }
-
       const { data: tasksData } = await query;
-      setTasks(tasksData ?? []);
+      
+      let filteredTasks = tasksData ?? [];
+      if (useGeo) {
+        filteredTasks = filteredTasks.filter(t =>
+          t.lat != null && t.lng != null && haversineKm(userLat, userLng, t.lat!, t.lng!) <= 50
+        );
+      }
+      setTasks(filteredTasks);
 
       // Get my existing responses
       const { data: myResponses } = await supabase
@@ -111,7 +127,7 @@ export default function MasterDashboard() {
     };
 
     fetchTasks();
-  }, [filter, user, profile?.work_area, refreshKey]);
+  }, [filter, user, refreshKey]);
 
   const respond = async (taskId: string) => {
     if (!user) return;
@@ -181,7 +197,7 @@ export default function MasterDashboard() {
       setGeoActive(true);
 
       if (nearby.length === 0) {
-        toast({ title: 'В этом районе пока нет заказов' });
+        toast({ title: 'Рядом пока нет заказов' });
       } else {
         toast({ title: `Найдено ${nearby.length} заказов рядом` });
       }

@@ -190,7 +190,7 @@ export default function TaskDetail() {
             {(() => {
               const isAcceptedMaster = isMaster && acceptedResponse?.master_id === user?.id;
               const showFull = isOwner || isAcceptedMaster;
-              const addr = showFull ? (task.address_full || task.address) : (task.address_area || task.work_area || task.address);
+              const addr = showFull ? (task.address_full || task.address) : task.address;
               return addr ? (
                 <span className="flex items-center gap-1">
                   <MapPin className="h-3 w-3" /> {addr}

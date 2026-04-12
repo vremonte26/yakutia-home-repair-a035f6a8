@@ -7,18 +7,6 @@ export const CATEGORIES = [
   { value: 'other', label: 'Другое', icon: '🛠️' },
 ] as const;
 
-export const WORK_AREAS = [
-  'Якутск — центр',
-  'Якутск — Залог',
-  'Якутск — ДСК',
-  'Якутск — Сайсары',
-  'Якутск — Птицефабрика',
-  'Якутск — Марха',
-  'Якутск — Жатай',
-  'Нерюнгри',
-  'Мирный',
-  'Алдан',
-] as const;
 
 export type TaskStatus = 'open' | 'in_progress' | 'completed' | 'cancelled';
 

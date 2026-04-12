@@ -278,12 +278,6 @@ export default function ProfilePage() {
 
           <UserRating rating={profile.rating} reviewCount={reviewCount} size="md" showEmpty />
 
-          {isMaster && profile.work_area && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4" />
-              {profile.work_area}
-            </div>
-          )}
 
           {isMaster && profile.categories && profile.categories.length > 0 && (
             <div className="flex flex-wrap gap-1">
