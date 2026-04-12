@@ -1,13 +1,19 @@
 import { CATEGORIES } from '@/lib/constants';
 import { Badge } from '@/components/ui/badge';
 
+const LEGACY_MAP: Record<string, string> = {
+  tiling: 'finishing',
+  painting: 'finishing',
+};
+
 interface CategoryBadgeProps {
   value: string;
   size?: 'sm' | 'default';
 }
 
 export function CategoryBadge({ value, size = 'default' }: CategoryBadgeProps) {
-  const cat = CATEGORIES.find(c => c.value === value);
+  const resolved = LEGACY_MAP[value] ?? value;
+  const cat = CATEGORIES.find(c => c.value === resolved);
   if (!cat) return <Badge variant="outline">{value}</Badge>;
 
   return (
@@ -16,4 +22,15 @@ export function CategoryBadge({ value, size = 'default' }: CategoryBadgeProps) {
       {cat.label}
     </Badge>
   );
+}
+
+/** Deduplicate categories by resolved label (handles legacy tiling/painting → finishing) */
+export function deduplicateCategories(categories: string[]): string[] {
+  const seen = new Set<string>();
+  return categories.filter(val => {
+    const resolved = LEGACY_MAP[val] ?? val;
+    if (seen.has(resolved)) return false;
+    seen.add(resolved);
+    return true;
+  });
 }

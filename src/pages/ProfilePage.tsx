@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CategoryBadge } from '@/components/CategoryBadge';
+import { CategoryBadge, deduplicateCategories } from '@/components/CategoryBadge';
 import { UserRating } from '@/components/UserRating';
 import { LogOut, ArrowLeftRight, MapPin, Phone, Clock, X, Trash2, Pencil, Camera, Check, LocateOff } from 'lucide-react';
 import ClickableAvatar from '@/components/ClickableAvatar';
@@ -287,7 +287,7 @@ export default function ProfilePage() {
 
           {isMaster && profile.categories && profile.categories.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              {profile.categories.map(cat => (
+              {deduplicateCategories(profile.categories).map(cat => (
                 <CategoryBadge key={cat} value={cat} size="sm" />
               ))}
             </div>

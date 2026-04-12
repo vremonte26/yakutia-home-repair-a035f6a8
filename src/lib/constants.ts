@@ -4,8 +4,6 @@ export const CATEGORIES = [
   { value: 'furniture', label: 'Сборка мебели', icon: '🪑' },
   { value: 'minor_repair', label: 'Мелкий ремонт', icon: '🔨' },
   { value: 'finishing', label: 'Отделка', icon: '🎨' },
-  { value: 'tiling', label: 'Отделка', icon: '🎨' },
-  { value: 'painting', label: 'Отделка', icon: '🎨' },
   { value: 'other', label: 'Другое', icon: '🛠️' },
 ] as const;
 
