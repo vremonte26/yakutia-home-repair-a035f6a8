@@ -31,6 +31,7 @@ export default function MasterDashboard() {
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoActive, setGeoActive] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     const fetchTasks = async () => {
