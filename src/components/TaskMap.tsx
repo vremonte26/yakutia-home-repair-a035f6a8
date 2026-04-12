@@ -3,13 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { MapPin, Navigation } from 'lucide-react';
+import { Map, Marker } from '@2gis/mapgl/types';
 
-
-declare global {
-  interface Window {
-    ymaps3: any;
-  }
-}
+const DGIS_API_KEY = 'f36bed16-b4cb-48a6-8b12-541f54023ec7';
 
 interface MapPoint {
   id: string;
@@ -22,7 +18,6 @@ interface MapPoint {
 interface TaskMapProps {
   mode: 'master' | 'client';
 }
-
 
 function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371;
@@ -42,9 +37,25 @@ function obfuscateCoords(lat: number, lng: number): [number, number] {
 
 type GeoState = 'asking' | 'denied' | 'granted' | 'error';
 
+function loadMapglScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector('script[src*="mapgl"]')) {
+      resolve();
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://mapgl.2gis.com/api/js/v1';
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load 2GIS MapGL'));
+    document.head.appendChild(script);
+  });
+}
+
 export function TaskMap({ mode }: TaskMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
   const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -53,14 +64,11 @@ export function TaskMap({ mode }: TaskMapProps) {
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [showUserPin, setShowUserPin] = useState(false);
 
-  // Request geolocation
   const requestGeolocation = useCallback(() => {
     setLoading(true);
     setGeoError(null);
-    console.log('[TaskMap] Запрос геолокации...');
 
     if (!navigator.geolocation) {
-      console.error('[TaskMap] Геолокация недоступна в браузере');
       setGeoState('error');
       setGeoError('Геолокация недоступна в вашем браузере или устройстве');
       setLoading(false);
@@ -69,25 +77,21 @@ export function TaskMap({ mode }: TaskMapProps) {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        console.log(`[TaskMap] Геолокация получена: ${lat}, ${lng}`);
-        setCenter({ lat, lng });
+        setCenter({ lat: position.coords.latitude, lng: position.coords.longitude });
         setShowUserPin(true);
         setGeoState('granted');
         setLoading(false);
       },
       (err) => {
-        console.error('[TaskMap] Ошибка геолокации:', err.message, 'code:', err.code);
         setLoading(false);
         if (err.code === err.PERMISSION_DENIED) {
           setGeoState('denied');
         } else if (err.code === err.POSITION_UNAVAILABLE) {
           setGeoState('error');
-          setGeoError('Геолокация недоступна. Проверьте, включена ли она в настройках устройства.');
+          setGeoError('Геолокация недоступна. Проверьте настройки устройства.');
         } else if (err.code === err.TIMEOUT) {
           setGeoState('error');
-          setGeoError('Не удалось определить местоположение — истекло время ожидания. Попробуйте ещё раз.');
+          setGeoError('Не удалось определить местоположение — истекло время ожидания.');
         } else {
           setGeoState('error');
           setGeoError('Не удалось определить местоположение.');
@@ -97,8 +101,6 @@ export function TaskMap({ mode }: TaskMapProps) {
     );
   }, []);
 
-
-  // Initialize map when center is set
   useEffect(() => {
     if (!user || !center) return;
 
@@ -110,67 +112,7 @@ export function TaskMap({ mode }: TaskMapProps) {
       try {
         const { lat: userLat, lng: userLng } = center;
 
-        // Get API key
-        console.log('[TaskMap] Получение ключа...');
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData?.session?.access_token;
-        if (!token) throw new Error('No session');
-
-        const res = await supabase.functions.invoke('get-yandex-key', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.error) throw new Error(res.error.message || 'Failed to get key');
-        const apiKey = res.data?.key;
-        if (!apiKey) throw new Error('No API key returned');
-        console.log('[TaskMap] Ключ получен');
-
-        if (cancelled) return;
-
-        // Load Yandex Maps script with timeout and retry
-        if (!window.ymaps3) {
-          console.log('[TaskMap] Загрузка скрипта...');
-          document.querySelectorAll('script[src*="api-maps.yandex.ru"]').forEach(s => s.remove());
-
-          const loadScript = () => new Promise<void>((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = `https://api-maps.yandex.ru/v3/?apikey=${apiKey}&lang=ru_RU`;
-            script.async = true;
-            script.defer = true;
-
-            const timeout = setTimeout(() => {
-              script.onload = null;
-              script.onerror = null;
-              script.remove();
-              reject(new Error('TIMEOUT'));
-            }, 5000);
-
-            script.onload = () => {
-              clearTimeout(timeout);
-              console.log('[TaskMap] Скрипт загружен');
-              resolve();
-            };
-            script.onerror = () => {
-              clearTimeout(timeout);
-              script.remove();
-              reject(new Error('SCRIPT_LOAD_FAILED'));
-            };
-            document.head.appendChild(script);
-          });
-
-          try {
-            await loadScript();
-          } catch (firstErr) {
-            console.warn('[TaskMap] Первая попытка не удалась, повтор...', (firstErr as Error).message);
-            if (cancelled) return;
-            await loadScript();
-          }
-        }
-
-        if (cancelled) return;
-
-        console.log('[TaskMap] Инициализация карты...');
-        await window.ymaps3.ready;
-
+        await loadMapglScript();
         if (cancelled || !mapRef.current) return;
 
         // Fetch points
@@ -206,43 +148,51 @@ export function TaskMap({ mode }: TaskMapProps) {
             }));
         }
 
-        console.log(`[TaskMap] Найдено ${points.length} точек`);
+        if (cancelled || !mapRef.current) return;
 
-        // Create map
-        const { YMap, YMapDefaultSchemeLayer, YMapDefaultFeaturesLayer, YMapMarker } = window.ymaps3;
-
-        const map = new YMap(mapRef.current, {
-          location: { center: [userLng, userLat], zoom: 11 },
-        });
-
-        map.addChild(new YMapDefaultSchemeLayer({}));
-        map.addChild(new YMapDefaultFeaturesLayer({}));
-
-        // User location pin (only if real geolocation)
-        if (showUserPin) {
-          const userEl = document.createElement('div');
-          userEl.style.cssText = 'width:16px;height:16px;border-radius:50%;background:#3b82f6;border:3px solid white;box-shadow:0 0 6px rgba(59,130,246,0.5);';
-          map.addChild(new YMapMarker({ coordinates: [userLng, userLat] }, userEl));
-        }
-
-        points.forEach(p => {
-          const el = document.createElement('div');
-          el.style.cssText = `width:12px;height:12px;border-radius:50%;background:${p.color === 'green' ? '#22c55e' : '#ef4444'};border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.3);cursor:pointer;`;
-          el.title = p.title || '';
-          map.addChild(new YMapMarker({ coordinates: [p.lng, p.lat] }, el));
+        // Create 2GIS map
+        const mapglAPI = (window as any).mapgl;
+        const map = new mapglAPI.Map(mapRef.current, {
+          center: [userLng, userLat],
+          zoom: 13,
+          key: DGIS_API_KEY,
         });
 
         mapInstanceRef.current = map;
-        console.log('[TaskMap] Карта создана успешно');
+
+        // User location marker
+        if (showUserPin) {
+          const userMarker = new mapglAPI.Marker(map, {
+            coordinates: [userLng, userLat],
+            icon: 'data:image/svg+xml,' + encodeURIComponent(
+              `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="8" fill="#3b82f6" stroke="white" stroke-width="3"/></svg>`
+            ),
+            size: [20, 20],
+            anchor: [10, 10],
+          });
+          markersRef.current.push(userMarker);
+        }
+
+        // Task/master markers
+        points.forEach(p => {
+          const fillColor = p.color === 'green' ? '#22c55e' : '#ef4444';
+          const marker = new mapglAPI.Marker(map, {
+            coordinates: [p.lng, p.lat],
+            icon: 'data:image/svg+xml,' + encodeURIComponent(
+              `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><circle cx="8" cy="8" r="6" fill="${fillColor}" stroke="white" stroke-width="2"/></svg>`
+            ),
+            size: [16, 16],
+            anchor: [8, 8],
+            label: { text: p.title || '' },
+          });
+          markersRef.current.push(marker);
+        });
+
+        console.log(`[TaskMap] 2GIS карта создана, ${points.length} точек`);
         setLoading(false);
       } catch (err: any) {
-        const msg = err.message;
-        console.error('[TaskMap] Ошибка:', msg);
-        if (msg === 'TIMEOUT' || msg === 'SCRIPT_LOAD_FAILED') {
-          setError('Не удалось загрузить карту. Проверьте интернет и обновите страницу.');
-        } else {
-          setError(msg);
-        }
+        console.error('[TaskMap] Ошибка:', err.message);
+        setError('Не удалось загрузить карту. Проверьте интернет и обновите страницу.');
         setLoading(false);
       }
     };
@@ -251,6 +201,8 @@ export function TaskMap({ mode }: TaskMapProps) {
 
     return () => {
       cancelled = true;
+      markersRef.current.forEach(m => { try { m.destroy(); } catch {} });
+      markersRef.current = [];
       if (mapInstanceRef.current) {
         try { mapInstanceRef.current.destroy(); } catch {}
         mapInstanceRef.current = null;
@@ -258,7 +210,6 @@ export function TaskMap({ mode }: TaskMapProps) {
     };
   }, [user, mode, center, showUserPin]);
 
-  // Permission prompt
   if (geoState === 'asking') {
     return (
       <div className="w-full rounded-xl border bg-card flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ height: 400 }}>
@@ -275,7 +226,6 @@ export function TaskMap({ mode }: TaskMapProps) {
     );
   }
 
-  // Denied / Error
   if (geoState === 'denied' || geoState === 'error') {
     return (
       <div className="w-full rounded-xl border bg-card flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ height: 400 }}>
