@@ -292,7 +292,7 @@ export function TaskMap({ mode }: TaskMapProps) {
       <div className="w-full rounded-xl border bg-card flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ height: 400 }}>
         <MapPin className="h-10 w-10 text-muted-foreground" />
         <p className="text-sm text-muted-foreground max-w-xs">
-          Для работы карты нужно ваше местоположение. Разрешите доступ к геолокации в настройках браузера.
+          Без геолокации карта не может показать заказы рядом. Разрешите доступ в настройках браузера или сбросьте разрешение в профиле.
         </p>
         {geoError && <p className="text-xs text-destructive">{geoError}</p>}
         <Button variant="outline" size="sm" onClick={requestGeolocation}>
