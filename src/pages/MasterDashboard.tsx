@@ -305,13 +305,19 @@ export default function MasterDashboard() {
         ))}
       </div>
 
+      {geoUnavailable && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          Для поиска заказов включите геолокацию в настройках браузера
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
         </div>
       ) : tasks.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-muted-foreground">Нет доступных заказов</p>
+          <p className="text-muted-foreground">{geoUnavailable ? 'Включите геолокацию для отображения заказов' : 'Нет доступных заказов'}</p>
         </div>
       ) : (
         <div className="space-y-3">
