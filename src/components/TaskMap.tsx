@@ -120,6 +120,14 @@ export function TaskMap({ mode }: TaskMapProps) {
     );
   }, []);
 
+  // Auto-request geolocation if previously granted
+  useEffect(() => {
+    if (geoState === 'granted' && !center && !autoTriggeredRef.current) {
+      autoTriggeredRef.current = true;
+      requestGeolocation();
+    }
+  }, [geoState, center, requestGeolocation]);
+
   useEffect(() => {
     if (!user || !center) return;
 
