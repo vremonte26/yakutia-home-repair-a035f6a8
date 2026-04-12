@@ -28,6 +28,8 @@ export default function MasterDashboard() {
   const [clientProfiles, setClientProfiles] = useState<Record<string, { name: string; rating: number | null }>>({});
   const [clientReviewCounts, setClientReviewCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoActive, setGeoActive] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
 
   useEffect(() => {
