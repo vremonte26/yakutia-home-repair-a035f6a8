@@ -177,6 +177,7 @@ export default function MasterDashboard() {
         navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
       );
       const { latitude, longitude } = pos.coords;
+      console.log('[GeoRefresh] Координаты мастера:', { latitude, longitude });
 
       let query = supabase
         .from('tasks')
@@ -189,11 +190,23 @@ export default function MasterDashboard() {
       if (filter) query = query.eq('category', filter);
 
       const { data, error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('[GeoRefresh] Ошибка запроса:', error);
+        throw error;
+      }
+
+      console.log('[GeoRefresh] Всего заказов с координатами:', data?.length ?? 0);
+      if (data && data.length > 0) {
+        data.forEach(t => {
+          const dist = haversineKm(latitude, longitude, t.lat!, t.lng!);
+          console.log(`[GeoRefresh] Заказ "${t.title}" (${t.id}): lat=${t.lat}, lng=${t.lng}, расстояние=${dist.toFixed(1)} км`);
+        });
+      }
 
       const nearby = (data ?? []).filter(t =>
         haversineKm(latitude, longitude, t.lat!, t.lng!) <= 50
       );
+      console.log('[GeoRefresh] Заказов в радиусе 50 км:', nearby.length);
 
       setTasks(nearby);
       setGeoActive(true);
