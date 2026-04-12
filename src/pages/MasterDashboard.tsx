@@ -30,6 +30,7 @@ export default function MasterDashboard() {
   const [loading, setLoading] = useState(true);
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoActive, setGeoActive] = useState(false);
+  const [geoUnavailable, setGeoUnavailable] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -50,6 +51,7 @@ export default function MasterDashboard() {
         userLng = pos.coords.longitude;
       } catch {
         useGeo = false;
+        setGeoUnavailable(true);
       }
 
       let query = supabase
