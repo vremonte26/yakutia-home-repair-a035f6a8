@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CATEGORIES, WORK_AREAS } from '@/lib/constants';
+import { CATEGORIES } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 import { useToast } from '@/hooks/use-toast';
@@ -24,7 +24,6 @@ export default function CreateTask() {
   const [geocoding, setGeocoding] = useState(false);
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [workArea, setWorkArea] = useState('');
 
   const geocodeAddress = async () => {
     if (!address.trim()) return;
@@ -32,40 +31,25 @@ export default function CreateTask() {
     setGeocodeError(null);
     setCoords(null);
 
-    console.log('[CreateTask] geocodeAddress called, address:', address.trim());
-
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData?.session?.access_token;
-      console.log('[CreateTask] session token present:', !!token);
       if (!token) throw new Error('No session');
 
-      console.log('[CreateTask] invoking geocode-address edge function...');
       const res = await supabase.functions.invoke('geocode-address', {
         body: { address: address.trim() },
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      console.log('[CreateTask] geocode-address response:', JSON.stringify(res.data));
-      console.log('[CreateTask] geocode-address error:', res.error);
-
       if (res.error || res.data?.error) {
         const errMsg = res.data?.message;
-        const fullAddr = res.data?.fullAddress;
-        console.error('[CreateTask] geocode error:', res.data?.error, errMsg, 'fullAddress:', fullAddr);
-        if (errMsg) {
-          setGeocodeError(errMsg);
-        } else {
-          setGeocodeError(res.data?.error || res.error?.message || 'Ошибка геокодирования');
-        }
+        setGeocodeError(errMsg || 'Адрес не найден. Проверьте правильность написания или выберите на карте');
         return;
       }
 
-      console.log(`Координаты получены: lat=${res.data.lat}, lng=${res.data.lng}`);
       setCoords({ lat: res.data.lat, lng: res.data.lng });
-    } catch (err: any) {
-      console.error('[CreateTask] geocode exception:', err);
-      setGeocodeError(err.message || 'Ошибка геокодирования');
+    } catch {
+      setGeocodeError('Адрес не найден. Проверьте правильность написания или выберите на карте');
     } finally {
       setGeocoding(false);
     }
@@ -93,7 +77,7 @@ export default function CreateTask() {
       } else {
         await geocodeAddress();
         if (!coords) {
-          toast({ title: 'Не удалось определить координаты. Уточните адрес', variant: 'destructive' });
+          toast({ title: 'Адрес не найден. Проверьте правильность написания или выберите на карте', variant: 'destructive' });
         }
       }
       return;
@@ -107,10 +91,8 @@ export default function CreateTask() {
       category,
       address,
       address_full: address,
-      address_area: workArea || null,
       lat: coords.lat,
       lng: coords.lng,
-      work_area: workArea || null,
     } as any);
     setLoading(false);
     if (error) {
@@ -156,20 +138,6 @@ export default function CreateTask() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Район <span className="text-destructive">*</span></label>
-              <Select value={workArea} onValueChange={setWorkArea} required>
-                <SelectTrigger>
-                  <SelectValue placeholder="Выберите район" />
-                </SelectTrigger>
-                <SelectContent>
-                  {WORK_AREAS.map(area => (
-                    <SelectItem key={area} value={area}>{area}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
               <label className="text-sm font-medium">Описание</label>
               <Textarea
                 placeholder="Опишите задачу подробнее..."
@@ -200,17 +168,14 @@ export default function CreateTask() {
                 </div>
               </div>
               {geocodeError && (
-                <p className="text-xs text-destructive">{geocodeError}</p>
+                <p className="text-xs text-destructive font-medium">{geocodeError}</p>
               )}
               {coords && (
-                <p className="text-xs text-green-600 font-medium">✅ Координаты получены: lat={coords.lat}, lng={coords.lng}</p>
-              )}
-              {geocodeError && (
-                <p className="text-xs text-destructive font-medium">❌ Ошибка геокодирования: {geocodeError}</p>
+                <p className="text-xs text-green-600 font-medium">✅ Адрес найден</p>
               )}
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading || !category || !workArea || geocoding}>
+            <Button type="submit" className="w-full" disabled={loading || !category || geocoding}>
               {loading ? 'Создание...' : 'Создать заказ'}
             </Button>
           </form>

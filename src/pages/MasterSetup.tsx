@@ -6,8 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CATEGORIES, WORK_AREAS } from '@/lib/constants';
+import { CATEGORIES } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Camera, X } from 'lucide-react';
@@ -17,7 +16,7 @@ export default function MasterSetup() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [categories, setCategories] = useState<string[]>([]);
-  const [workArea, setWorkArea] = useState('');
+  
   const [about, setAbout] = useState('');
   const [phone, setPhone] = useState('');
   const [name, setName] = useState(profile?.name || '');
@@ -87,10 +86,6 @@ export default function MasterSetup() {
       toast({ title: 'Выберите хотя бы одну категорию', variant: 'destructive' });
       return;
     }
-    if (!workArea) {
-      toast({ title: 'Выберите район работы', variant: 'destructive' });
-      return;
-    }
     setLoading(true);
 
     try {
@@ -115,7 +110,6 @@ export default function MasterSetup() {
           name: name.trim(),
           role: 'master' as const,
           categories,
-          work_area: workArea,
           about,
           phone: phone || undefined,
           photo: photoUrl,
@@ -234,19 +228,6 @@ export default function MasterSetup() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Район работы</label>
-              <Select value={workArea} onValueChange={setWorkArea}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Выберите район" />
-                </SelectTrigger>
-                <SelectContent>
-                  {WORK_AREAS.map(area => (
-                    <SelectItem key={area} value={area}>{area}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium">О себе</label>
