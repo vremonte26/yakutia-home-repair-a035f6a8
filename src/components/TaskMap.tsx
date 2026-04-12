@@ -300,7 +300,8 @@ export function TaskMap({ mode }: TaskMapProps) {
       {!loading && mapInstanceRef.current && (
         <button
           onClick={handleLocateMe}
-          className="absolute top-3 right-3 z-20 bg-card rounded-lg shadow-md p-2 hover:bg-muted active:bg-muted/80 transition-colors"
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-white/90 backdrop-blur-sm rounded-xl shadow-lg flex items-center justify-center hover:bg-white active:bg-gray-100 transition-colors"
+          style={{ width: 44, height: 44 }}
           title="Моё местоположение"
         >
           <Locate className="h-5 w-5 text-primary" />
