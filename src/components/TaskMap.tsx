@@ -38,6 +38,18 @@ function obfuscateCoords(lat: number, lng: number): [number, number] {
 
 type GeoState = 'asking' | 'denied' | 'granted' | 'error';
 
+const GEO_PERMISSION_KEY = 'geo_permission';
+
+function getSavedGeoPermission(): GeoState {
+  const saved = localStorage.getItem(GEO_PERMISSION_KEY);
+  if (saved === 'granted' || saved === 'denied') return saved;
+  return 'asking';
+}
+
+function saveGeoPermission(state: 'granted' | 'denied') {
+  localStorage.setItem(GEO_PERMISSION_KEY, state);
+}
+
 function loadMapglScript(): Promise<void> {
   return new Promise((resolve, reject) => {
     if (document.querySelector('script[src*="mapgl"]')) {
@@ -62,10 +74,12 @@ export function TaskMap({ mode }: TaskMapProps) {
   const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [geoState, setGeoState] = useState<GeoState>('asking');
+  const [geoState, setGeoState] = useState<GeoState>(getSavedGeoPermission);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [showUserPin, setShowUserPin] = useState(false);
+
+  const autoTriggeredRef = useRef(false);
 
   const requestGeolocation = useCallback(() => {
     setLoading(true);
@@ -83,12 +97,14 @@ export function TaskMap({ mode }: TaskMapProps) {
         setCenter({ lat: position.coords.latitude, lng: position.coords.longitude });
         setShowUserPin(true);
         setGeoState('granted');
+        saveGeoPermission('granted');
         setLoading(false);
       },
       (err) => {
         setLoading(false);
         if (err.code === err.PERMISSION_DENIED) {
           setGeoState('denied');
+          saveGeoPermission('denied');
         } else if (err.code === err.POSITION_UNAVAILABLE) {
           setGeoState('error');
           setGeoError('Геолокация недоступна. Проверьте настройки устройства.');
@@ -103,6 +119,14 @@ export function TaskMap({ mode }: TaskMapProps) {
       { enableHighAccuracy: false, timeout: 10000 }
     );
   }, []);
+
+  // Auto-request geolocation if previously granted
+  useEffect(() => {
+    if (geoState === 'granted' && !center && !autoTriggeredRef.current) {
+      autoTriggeredRef.current = true;
+      requestGeolocation();
+    }
+  }, [geoState, center, requestGeolocation]);
 
   useEffect(() => {
     if (!user || !center) return;
@@ -256,7 +280,7 @@ export function TaskMap({ mode }: TaskMapProps) {
           <p className="text-sm text-muted-foreground mt-1">Чтобы показать заказы и мастеров рядом с вами</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => setGeoState('denied')}>Запретить</Button>
+          <Button variant="outline" onClick={() => { setGeoState('denied'); saveGeoPermission('denied'); }}>Запретить</Button>
           <Button onClick={requestGeolocation}>Разрешить</Button>
         </div>
       </div>
@@ -268,7 +292,7 @@ export function TaskMap({ mode }: TaskMapProps) {
       <div className="w-full rounded-xl border bg-card flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ height: 400 }}>
         <MapPin className="h-10 w-10 text-muted-foreground" />
         <p className="text-sm text-muted-foreground max-w-xs">
-          Для работы карты нужно ваше местоположение. Разрешите доступ к геолокации в настройках браузера.
+          Без геолокации карта не может показать заказы рядом. Разрешите доступ в настройках браузера или сбросьте разрешение в профиле.
         </p>
         {geoError && <p className="text-xs text-destructive">{geoError}</p>}
         <Button variant="outline" size="sm" onClick={requestGeolocation}>

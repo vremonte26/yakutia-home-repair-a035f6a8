@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CategoryBadge } from '@/components/CategoryBadge';
 import { UserRating } from '@/components/UserRating';
-import { LogOut, ArrowLeftRight, MapPin, Phone, Clock, X, Trash2, Pencil, Camera, Check } from 'lucide-react';
+import { LogOut, ArrowLeftRight, MapPin, Phone, Clock, X, Trash2, Pencil, Camera, Check, LocateOff } from 'lucide-react';
 import ClickableAvatar from '@/components/ClickableAvatar';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -303,6 +303,17 @@ export default function ProfilePage() {
         <Button variant="outline" className="w-full" onClick={switchRole}>
           <ArrowLeftRight className="h-4 w-4 mr-2" />
           {isMaster ? 'Стать клиентом' : 'Стать мастером'}
+        </Button>
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={() => {
+            localStorage.removeItem('geo_permission');
+            toast({ title: 'Разрешение на геолокацию сброшено. При следующем открытии карты браузер запросит его снова.' });
+          }}
+        >
+          <LocateOff className="h-4 w-4 mr-2" />
+          Сбросить разрешение геолокации
         </Button>
         <Button variant="destructive" className="w-full" onClick={signOut}>
           <LogOut className="h-4 w-4 mr-2" />
