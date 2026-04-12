@@ -79,6 +79,14 @@ export function TaskMap({ mode }: TaskMapProps) {
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [showUserPin, setShowUserPin] = useState(false);
 
+  // Auto-request geolocation if previously granted
+  useEffect(() => {
+    if (geoState === 'granted' && !center) {
+      requestGeolocation();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const requestGeolocation = useCallback(() => {
     setLoading(true);
     setGeoError(null);
