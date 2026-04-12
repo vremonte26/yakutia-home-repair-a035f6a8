@@ -38,6 +38,18 @@ function obfuscateCoords(lat: number, lng: number): [number, number] {
 
 type GeoState = 'asking' | 'denied' | 'granted' | 'error';
 
+const GEO_PERMISSION_KEY = 'geo_permission';
+
+function getSavedGeoPermission(): GeoState {
+  const saved = localStorage.getItem(GEO_PERMISSION_KEY);
+  if (saved === 'granted' || saved === 'denied') return saved;
+  return 'asking';
+}
+
+function saveGeoPermission(state: 'granted' | 'denied') {
+  localStorage.setItem(GEO_PERMISSION_KEY, state);
+}
+
 function loadMapglScript(): Promise<void> {
   return new Promise((resolve, reject) => {
     if (document.querySelector('script[src*="mapgl"]')) {
@@ -62,7 +74,7 @@ export function TaskMap({ mode }: TaskMapProps) {
   const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [geoState, setGeoState] = useState<GeoState>('asking');
+  const [geoState, setGeoState] = useState<GeoState>(getSavedGeoPermission);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [showUserPin, setShowUserPin] = useState(false);
@@ -83,12 +95,14 @@ export function TaskMap({ mode }: TaskMapProps) {
         setCenter({ lat: position.coords.latitude, lng: position.coords.longitude });
         setShowUserPin(true);
         setGeoState('granted');
+        saveGeoPermission('granted');
         setLoading(false);
       },
       (err) => {
         setLoading(false);
         if (err.code === err.PERMISSION_DENIED) {
           setGeoState('denied');
+          saveGeoPermission('denied');
         } else if (err.code === err.POSITION_UNAVAILABLE) {
           setGeoState('error');
           setGeoError('Геолокация недоступна. Проверьте настройки устройства.');
