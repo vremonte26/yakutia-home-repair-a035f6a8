@@ -213,6 +213,40 @@ export function TaskMap({ mode }: TaskMapProps) {
     };
   }, [user, mode, center, showUserPin]);
 
+  const handleLocateMe = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast({ title: 'Не удалось определить ваше местоположение. Проверьте настройки геолокации в браузере.', variant: 'destructive' });
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const map = mapInstanceRef.current;
+        const mapglAPI = (window as any).mapgl;
+        if (map && mapglAPI) {
+          map.setCenter([longitude, latitude]);
+          map.setZoom(15);
+          if (userMarkerRef.current) {
+            try { userMarkerRef.current.destroy(); } catch {}
+          }
+          const marker = new mapglAPI.Marker(map, {
+            coordinates: [longitude, latitude],
+            icon: 'data:image/svg+xml,' + encodeURIComponent(
+              `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="8" fill="#3b82f6" stroke="white" stroke-width="3"/></svg>`
+            ),
+            size: [20, 20],
+            anchor: [10, 10],
+          });
+          userMarkerRef.current = marker;
+        }
+      },
+      () => {
+        toast({ title: 'Не удалось определить ваше местоположение. Проверьте настройки геолокации в браузере.', variant: 'destructive' });
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, [toast]);
+
   if (geoState === 'asking') {
     return (
       <div className="w-full rounded-xl border bg-card flex flex-col items-center justify-center gap-4 p-6 text-center" style={{ height: 400 }}>
@@ -255,41 +289,6 @@ export function TaskMap({ mode }: TaskMapProps) {
     );
   }
 
-  const handleLocateMe = useCallback(() => {
-    if (!navigator.geolocation) {
-      toast({ title: 'Не удалось определить ваше местоположение. Проверьте настройки геолокации в браузере.', variant: 'destructive' });
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        const map = mapInstanceRef.current;
-        const mapglAPI = (window as any).mapgl;
-        if (map && mapglAPI) {
-          map.setCenter([longitude, latitude]);
-          map.setZoom(15);
-          // Update or create user marker
-          if (userMarkerRef.current) {
-            try { userMarkerRef.current.destroy(); } catch {}
-          }
-          const marker = new mapglAPI.Marker(map, {
-            coordinates: [longitude, latitude],
-            icon: 'data:image/svg+xml,' + encodeURIComponent(
-              `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><circle cx="10" cy="10" r="8" fill="#3b82f6" stroke="white" stroke-width="3"/></svg>`
-            ),
-            size: [20, 20],
-            anchor: [10, 10],
-          });
-          userMarkerRef.current = marker;
-        }
-      },
-      () => {
-        toast({ title: 'Не удалось определить ваше местоположение. Проверьте настройки геолокации в браузере.', variant: 'destructive' });
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  }, [toast]);
-
   return (
     <div className="relative w-full rounded-xl overflow-hidden border" style={{ height: 400 }}>
       {loading && (
@@ -301,7 +300,7 @@ export function TaskMap({ mode }: TaskMapProps) {
       {!loading && mapInstanceRef.current && (
         <button
           onClick={handleLocateMe}
-          className="absolute top-3 right-3 z-20 bg-white rounded-lg shadow-md p-2 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+          className="absolute top-3 right-3 z-20 bg-card rounded-lg shadow-md p-2 hover:bg-muted active:bg-muted/80 transition-colors"
           title="Моё местоположение"
         >
           <Locate className="h-5 w-5 text-primary" />
