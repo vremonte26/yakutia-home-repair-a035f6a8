@@ -16,6 +16,7 @@ import ChatRoom from "./pages/ChatRoom";
 import ProfilePage from "./pages/ProfilePage";
 import { AppLayout } from "./components/AppLayout";
 import TaskDetail from "./pages/TaskDetail";
+import MasterProfile from "./pages/MasterProfile";
 import MapPage from "./pages/MapPage";
 import NotFound from "./pages/NotFound";
 
