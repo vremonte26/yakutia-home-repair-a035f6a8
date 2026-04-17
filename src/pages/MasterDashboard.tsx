@@ -343,11 +343,16 @@ export default function MasterDashboard() {
             const isOwnTask = task.client_id === user?.id;
 
             return (
-              <TaskCard key={task.id} task={task} clientInfo={
-                clientProfiles[task.client_id]
-                  ? { ...clientProfiles[task.client_id], reviewCount: clientReviewCounts[task.client_id] || 0 }
-                  : undefined
-              }>
+              <TaskCard
+                key={task.id}
+                task={task}
+                onClick={() => navigate(`/task/${task.id}`)}
+                clientInfo={
+                  clientProfiles[task.client_id]
+                    ? { ...clientProfiles[task.client_id], reviewCount: clientReviewCounts[task.client_id] || 0 }
+                    : undefined
+                }
+              >
                 <div className="flex items-center justify-between mt-2 gap-2">
                   <span className="text-xs text-muted-foreground">{count}/5 откликов</span>
                   {isOwnTask ? (
