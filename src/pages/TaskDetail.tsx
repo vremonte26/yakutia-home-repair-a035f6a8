@@ -563,45 +563,4 @@ function MasterCard({
     </Card>
   );
 }
-  const master = response.profiles;
-  if (!master) return null;
 
-  return (
-    <Card className={isAccepted ? 'border-primary/50 bg-primary/5' : ''}>
-      <CardContent className="p-4 space-y-2">
-        <div className="flex items-center gap-3">
-          <ClickableAvatar src={master.photo} name={master.name} size="md" />
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm truncate">{master.name}</p>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <UserRating rating={master.rating} reviewCount={reviewCount} size="sm" />
-              <span>
-                {formatDistanceToNow(new Date(response.created_at), { addSuffix: true, locale: ru })}
-              </span>
-            </div>
-          </div>
-          {isAccepted && (
-            <Badge variant="default" className="shrink-0 text-xs">Выбран</Badge>
-          )}
-        </div>
-
-        {master.about && (
-          <p className="text-xs text-muted-foreground line-clamp-2">{master.about}</p>
-        )}
-
-        <div className="flex gap-2">
-          {canAccept && onAccept && (
-            <Button size="sm" className="flex-1 gap-1" onClick={onAccept} disabled={loading}>
-              <CheckCircle className="h-3.5 w-3.5" /> Выбрать
-            </Button>
-          )}
-          {isAccepted && onCancel && (
-            <Button size="sm" variant="destructive" className="flex-1 gap-1" onClick={onCancel} disabled={loading}>
-              <XCircle className="h-3.5 w-3.5" /> Отменить мастера
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
