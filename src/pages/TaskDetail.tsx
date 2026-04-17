@@ -54,9 +54,15 @@ export default function TaskDetail() {
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [reviewTarget, setReviewTarget] = useState<{ id: string; name: string } | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ label: string; action: () => Promise<void> } | null>(null);
+  const [clientProfile, setClientProfile] = useState<{ name: string; photo: string | null; rating: number | null } | null>(null);
+  const [clientReviews, setClientReviews] = useState<ClientReview[]>([]);
+  const [myResponseId, setMyResponseId] = useState<string | null>(null);
+  const [respondLoading, setRespondLoading] = useState(false);
 
   const isOwner = task?.client_id === user?.id;
   const isMaster = profile?.role === 'master';
+  const totalResponses = responses.filter(r => r.status !== 'rejected').length;
+  const isFull = totalResponses >= 5;
 
   const fetchData = async () => {
     if (!id || !user) return;
