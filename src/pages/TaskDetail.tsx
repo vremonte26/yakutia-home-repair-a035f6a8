@@ -105,6 +105,36 @@ export default function TaskDetail() {
         .eq('from_user', user.id)
         .eq('task_id', id);
       setMyReviews(new Set((existingReviews ?? []).map((r: any) => r.to_user)));
+
+      // Fetch client profile
+      const { data: clientData } = await supabase
+        .from('profiles')
+        .select('name, photo, rating')
+        .eq('id', taskData.client_id)
+        .maybeSingle();
+      setClientProfile(clientData as any);
+
+      // Fetch reviews about the client (from other masters)
+      const { data: cReviews } = await supabase
+        .from('reviews')
+        .select('id, rating, comment, created_at, from_user')
+        .eq('to_user', taskData.client_id)
+        .order('created_at', { ascending: false });
+
+      const reviewerIds = [...new Set((cReviews ?? []).map((r: any) => r.from_user))];
+      const reviewerMap: Record<string, string> = {};
+      if (reviewerIds.length > 0) {
+        const { data: reviewerProfiles } = await supabase
+          .from('profiles')
+          .select('id, name')
+          .in('id', reviewerIds);
+        (reviewerProfiles ?? []).forEach((p: any) => { reviewerMap[p.id] = p.name; });
+      }
+      setClientReviews(((cReviews ?? []) as any[]).map(r => ({ ...r, reviewer_name: reviewerMap[r.from_user] || 'Мастер' })));
+
+      // Find my response (if I'm a master)
+      const mine = (responsesData ?? []).find((r: any) => r.master_id === user.id);
+      setMyResponseId(mine && mine.status !== 'rejected' ? mine.id : null);
     }
 
     setLoading(false);
