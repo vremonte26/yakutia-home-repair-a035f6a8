@@ -59,7 +59,7 @@ export default function MasterDashboard() {
       let query = supabase
         .from('tasks')
         .select('*')
-        .eq('status', 'open')
+        .in('status', ['open', 'completed', 'cancelled'])
         .order('created_at', { ascending: false });
 
       if (filter) {
@@ -67,7 +67,7 @@ export default function MasterDashboard() {
       }
 
       const { data: tasksData } = await query;
-      
+
       let filteredTasks = tasksData ?? [];
       if (useGeo) {
         filteredTasks = filteredTasks.filter(t =>
