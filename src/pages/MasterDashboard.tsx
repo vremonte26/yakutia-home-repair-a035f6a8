@@ -96,7 +96,6 @@ export default function MasterDashboard() {
           t.lat != null && t.lng != null && haversineKm(userLat, userLng, t.lat!, t.lng!) <= 50
         );
       }
-      setTasks(filteredTasks);
 
       // Get my existing responses
       const { data: myResponses } = await supabase
@@ -104,9 +103,11 @@ export default function MasterDashboard() {
         .select('task_id')
         .eq('master_id', user.id);
 
-      setRespondedTaskIds(new Set((myResponses ?? []).map(r => r.task_id)));
+      const myRespondedSet = new Set((myResponses ?? []).map(r => r.task_id));
+      setRespondedTaskIds(myRespondedSet);
 
       // Get response counts for each task
+      const counts: Record<string, number> = {};
       if (tasksData && tasksData.length > 0) {
         const taskIds = tasksData.map(t => t.id);
         const { data: allResponses } = await supabase
@@ -115,7 +116,6 @@ export default function MasterDashboard() {
           .in('task_id', taskIds)
           .neq('status', 'rejected');
 
-        const counts: Record<string, number> = {};
         (allResponses ?? []).forEach(r => {
           counts[r.task_id] = (counts[r.task_id] || 0) + 1;
         });
