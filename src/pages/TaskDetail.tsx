@@ -31,6 +31,15 @@ interface ResponseWithMaster {
   } | null;
 }
 
+interface ClientReview {
+  id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  from_user: string;
+  reviewer_name?: string;
+}
+
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
   const { user, profile } = useAuth();
