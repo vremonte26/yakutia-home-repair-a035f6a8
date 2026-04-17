@@ -1,14 +1,37 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, PlusCircle, User, Wrench, ClipboardList, Map, MessageCircle } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { profile } = useAuth();
+  const { profile, user, refreshProfile } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [switching, setSwitching] = useState(false);
 
   const isMaster = profile?.role === 'master';
+
+  const toggleRole = async () => {
+    if (!user || !profile || switching) return;
+    const newRole = isMaster ? 'client' : 'master';
+    setSwitching(true);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('id', user.id);
+    if (error) {
+      toast({ title: 'Не удалось переключить роль', description: error.message, variant: 'destructive' });
+      setSwitching(false);
+      return;
+    }
+    await refreshProfile();
+    setSwitching(false);
+    navigate('/');
+  };
 
   const navItems = isMaster
     ? [
@@ -39,9 +62,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2">
             {profile && <NotificationBell />}
             {profile && (
-              <span className="text-xs px-2 py-1 rounded-full bg-accent text-accent-foreground font-medium">
+              <button
+                type="button"
+                onClick={toggleRole}
+                disabled={switching}
+                title="Переключить роль"
+                className="text-xs px-2 py-1 rounded-full bg-accent text-accent-foreground font-medium hover:bg-accent/80 transition-colors disabled:opacity-60"
+              >
                 {isMaster ? '🔧 Мастер' : '👤 Клиент'}
-              </span>
+              </button>
             )}
           </div>
         </div>
