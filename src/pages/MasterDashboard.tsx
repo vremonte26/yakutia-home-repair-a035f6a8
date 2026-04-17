@@ -149,11 +149,36 @@ export default function MasterDashboard() {
         }
       }
 
+      // Hide open tasks that already have 5+ responses (unless current master responded)
+      const visibleTasks = filteredTasks.filter(t => {
+        if (t.status !== 'open') return true;
+        const c = counts[t.id] || 0;
+        if (c < 5) return true;
+        return myRespondedSet.has(t.id);
+      });
+      setTasks(visibleTasks);
+
       setLoading(false);
     };
 
     fetchTasks();
   }, [filter, user, refreshKey]);
+
+  // Realtime: refresh feed when responses change so 5/5 tasks disappear instantly
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel('master-feed-responses')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'responses' },
+        () => setRefreshKey(k => k + 1)
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const respond = async (taskId: string) => {
     if (!user) return;
