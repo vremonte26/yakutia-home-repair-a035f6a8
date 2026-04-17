@@ -416,6 +416,7 @@ export default function TaskDetail() {
                 isAccepted
                 onCancel={!isCompleted ? () => setConfirmAction({ label: 'отменить мастера', action: () => cancelMaster(acceptedResponse.id) }) : undefined}
                 loading={actionLoading === acceptedResponse.id}
+                onOpen={() => navigate(`/master/${acceptedResponse.master_id}?task=${task.id}`)}
               />
             </div>
           )}
@@ -433,6 +434,7 @@ export default function TaskDetail() {
                   canAccept={!acceptedResponse && task.status === 'open'}
                   onAccept={() => acceptMaster(r.id)}
                   loading={actionLoading === r.id}
+                  onOpen={() => navigate(`/master/${r.master_id}?task=${task.id}`)}
                 />
               ))}
             </div>
