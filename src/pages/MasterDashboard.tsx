@@ -23,6 +23,7 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 export default function MasterDashboard() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState<any[]>([]);
   const [respondedTaskIds, setRespondedTaskIds] = useState<Set<string>>(new Set());
   const [responseCounts, setResponseCounts] = useState<Record<string, number>>({});
