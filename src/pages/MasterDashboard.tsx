@@ -96,7 +96,6 @@ export default function MasterDashboard() {
           t.lat != null && t.lng != null && haversineKm(userLat, userLng, t.lat!, t.lng!) <= 50
         );
       }
-      setTasks(filteredTasks);
 
       // Get my existing responses
       const { data: myResponses } = await supabase
@@ -104,9 +103,11 @@ export default function MasterDashboard() {
         .select('task_id')
         .eq('master_id', user.id);
 
-      setRespondedTaskIds(new Set((myResponses ?? []).map(r => r.task_id)));
+      const myRespondedSet = new Set((myResponses ?? []).map(r => r.task_id));
+      setRespondedTaskIds(myRespondedSet);
 
       // Get response counts for each task
+      const counts: Record<string, number> = {};
       if (tasksData && tasksData.length > 0) {
         const taskIds = tasksData.map(t => t.id);
         const { data: allResponses } = await supabase
@@ -115,7 +116,6 @@ export default function MasterDashboard() {
           .in('task_id', taskIds)
           .neq('status', 'rejected');
 
-        const counts: Record<string, number> = {};
         (allResponses ?? []).forEach(r => {
           counts[r.task_id] = (counts[r.task_id] || 0) + 1;
         });
@@ -149,11 +149,36 @@ export default function MasterDashboard() {
         }
       }
 
+      // Hide open tasks that already have 5+ responses (unless current master responded)
+      const visibleTasks = filteredTasks.filter(t => {
+        if (t.status !== 'open') return true;
+        const c = counts[t.id] || 0;
+        if (c < 5) return true;
+        return myRespondedSet.has(t.id);
+      });
+      setTasks(visibleTasks);
+
       setLoading(false);
     };
 
     fetchTasks();
   }, [filter, user, refreshKey]);
+
+  // Realtime: refresh feed when responses change so 5/5 tasks disappear instantly
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel('master-feed-responses')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'responses' },
+        () => setRefreshKey(k => k + 1)
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   const respond = async (taskId: string) => {
     if (!user) return;
@@ -232,28 +257,31 @@ export default function MasterDashboard() {
       );
       console.log('[GeoRefresh] Заказов в радиусе 50 км:', nearby.length);
 
-      setTasks(nearby);
       setGeoActive(true);
 
-      if (nearby.length === 0) {
-        toast({ title: 'Рядом пока нет заказов' });
-      } else {
-        toast({ title: `Найдено ${nearby.length} заказов рядом` });
-      }
-
       // refresh auxiliary data for nearby tasks
+      let visibleNearby = nearby;
       if (nearby.length > 0) {
         const taskIds = nearby.map(t => t.id);
         const [{ data: myResp }, { data: allResp }] = await Promise.all([
           supabase.from('responses').select('task_id').eq('master_id', user!.id),
           supabase.from('responses').select('task_id').in('task_id', taskIds).neq('status', 'rejected'),
         ]);
-        setRespondedTaskIds(new Set((myResp ?? []).map(r => r.task_id)));
+        const myRespSet = new Set((myResp ?? []).map(r => r.task_id));
+        setRespondedTaskIds(myRespSet);
         const counts: Record<string, number> = {};
         (allResp ?? []).forEach(r => { counts[r.task_id] = (counts[r.task_id] || 0) + 1; });
         setResponseCounts(counts);
 
-        const clientIds = [...new Set(nearby.map(t => t.client_id))];
+        // Hide open tasks with 5+ responses (unless current master responded)
+        visibleNearby = nearby.filter(t => {
+          if (t.status !== 'open') return true;
+          const c = counts[t.id] || 0;
+          if (c < 5) return true;
+          return myRespSet.has(t.id);
+        });
+
+        const clientIds = [...new Set(visibleNearby.map(t => t.client_id))];
         const [{ data: profs }, { data: revs }] = await Promise.all([
           supabase.from('profiles').select('id, name, rating').in('id', clientIds),
           supabase.from('reviews').select('to_user').in('to_user', clientIds),
@@ -264,6 +292,14 @@ export default function MasterDashboard() {
         const rc: Record<string, number> = {};
         (revs ?? []).forEach((r: any) => { rc[r.to_user] = (rc[r.to_user] || 0) + 1; });
         setClientReviewCounts(rc);
+      }
+
+      setTasks(visibleNearby);
+
+      if (visibleNearby.length === 0) {
+        toast({ title: 'Рядом пока нет заказов' });
+      } else {
+        toast({ title: `Найдено ${visibleNearby.length} заказов рядом` });
       }
     } catch (err: any) {
       if (err?.code === 1) {

@@ -144,6 +144,22 @@ export default function TaskDetail() {
     fetchData();
   }, [id, user]);
 
+  // Realtime: update counter when responses change for this task
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`task-${id}-responses`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'responses', filter: `task_id=eq.${id}` },
+        () => fetchData()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id]);
+
   const acceptMaster = async (responseId: string) => {
     setActionLoading(responseId);
     try {
