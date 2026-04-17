@@ -188,7 +188,43 @@ export default function TaskDetail() {
     setActionLoading(null);
   };
 
-  if (loading) {
+  const respondToTask = async () => {
+    if (!user || !id) return;
+    setRespondLoading(true);
+    const { data, error } = await supabase
+      .from('responses')
+      .insert({ task_id: id, master_id: user.id })
+      .select('id')
+      .single();
+    if (error) {
+      if (error.message?.includes('Maximum 5')) {
+        toast({ title: 'На этот заказ уже откликнулось 5 мастеров', variant: 'destructive' });
+      } else if (error.message?.includes('Cannot respond')) {
+        toast({ title: 'Нельзя откликнуться на свою заявку', variant: 'destructive' });
+      } else {
+        toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      }
+    } else {
+      setMyResponseId(data.id);
+      toast({ title: 'Отклик отправлен!' });
+      await fetchData();
+    }
+    setRespondLoading(false);
+  };
+
+  const cancelMyResponse = async () => {
+    if (!myResponseId) return;
+    setRespondLoading(true);
+    const { error } = await supabase.from('responses').delete().eq('id', myResponseId);
+    if (error) {
+      toast({ title: 'Не удалось отменить отклик', description: error.message, variant: 'destructive' });
+    } else {
+      setMyResponseId(null);
+      toast({ title: 'Отклик отменён' });
+      await fetchData();
+    }
+    setRespondLoading(false);
+  };
     return (
       <div className="flex items-center justify-center py-20">
         <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
