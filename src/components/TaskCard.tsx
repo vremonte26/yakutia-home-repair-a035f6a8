@@ -29,6 +29,7 @@ interface TaskCardProps {
   showFullAddress?: boolean;
   onClick?: () => void;
   children?: React.ReactNode;
+  dimmed?: boolean;
 }
 
 const statusVariant: Record<TaskStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -38,13 +39,15 @@ const statusVariant: Record<TaskStatus, 'default' | 'secondary' | 'destructive' 
   cancelled: 'destructive',
 };
 
-export function TaskCard({ task, clientInfo, showFullAddress, onClick, children }: TaskCardProps) {
+export function TaskCard({ task, clientInfo, showFullAddress, onClick, children, dimmed }: TaskCardProps) {
   const displayAddress = showFullAddress
     ? (task.address_full || task.address)
     : (task.address_area || task.address);
   return (
     <Card
-      className="cursor-pointer hover:shadow-md transition-shadow animate-fade-in"
+      className={`cursor-pointer hover:shadow-md transition-shadow animate-fade-in ${
+        dimmed ? 'opacity-60 bg-muted/40' : ''
+      }`}
       onClick={onClick}
     >
       <CardHeader className="pb-2">
