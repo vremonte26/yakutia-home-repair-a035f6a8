@@ -31,6 +31,15 @@ interface ResponseWithMaster {
   } | null;
 }
 
+interface ClientReview {
+  id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+  from_user: string;
+  reviewer_name?: string;
+}
+
 export default function TaskDetail() {
   const { id } = useParams<{ id: string }>();
   const { user, profile } = useAuth();
@@ -45,9 +54,15 @@ export default function TaskDetail() {
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [reviewTarget, setReviewTarget] = useState<{ id: string; name: string } | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ label: string; action: () => Promise<void> } | null>(null);
+  const [clientProfile, setClientProfile] = useState<{ name: string; photo: string | null; rating: number | null } | null>(null);
+  const [clientReviews, setClientReviews] = useState<ClientReview[]>([]);
+  const [myResponseId, setMyResponseId] = useState<string | null>(null);
+  const [respondLoading, setRespondLoading] = useState(false);
 
   const isOwner = task?.client_id === user?.id;
   const isMaster = profile?.role === 'master';
+  const totalResponses = responses.filter(r => r.status !== 'rejected').length;
+  const isFull = totalResponses >= 5;
 
   const fetchData = async () => {
     if (!id || !user) return;
@@ -90,6 +105,36 @@ export default function TaskDetail() {
         .eq('from_user', user.id)
         .eq('task_id', id);
       setMyReviews(new Set((existingReviews ?? []).map((r: any) => r.to_user)));
+
+      // Fetch client profile
+      const { data: clientData } = await supabase
+        .from('profiles')
+        .select('name, photo, rating')
+        .eq('id', taskData.client_id)
+        .maybeSingle();
+      setClientProfile(clientData as any);
+
+      // Fetch reviews about the client (from other masters)
+      const { data: cReviews } = await supabase
+        .from('reviews')
+        .select('id, rating, comment, created_at, from_user')
+        .eq('to_user', taskData.client_id)
+        .order('created_at', { ascending: false });
+
+      const reviewerIds = [...new Set((cReviews ?? []).map((r: any) => r.from_user))];
+      const reviewerMap: Record<string, string> = {};
+      if (reviewerIds.length > 0) {
+        const { data: reviewerProfiles } = await supabase
+          .from('profiles')
+          .select('id, name')
+          .in('id', reviewerIds);
+        (reviewerProfiles ?? []).forEach((p: any) => { reviewerMap[p.id] = p.name; });
+      }
+      setClientReviews(((cReviews ?? []) as any[]).map(r => ({ ...r, reviewer_name: reviewerMap[r.from_user] || 'Мастер' })));
+
+      // Find my response (if I'm a master)
+      const mine = (responsesData ?? []).find((r: any) => r.master_id === user.id);
+      setMyResponseId(mine && mine.status !== 'rejected' ? mine.id : null);
     }
 
     setLoading(false);
@@ -141,6 +186,44 @@ export default function TaskDetail() {
       toast({ title: 'Ошибка', description: e.message, variant: 'destructive' });
     }
     setActionLoading(null);
+  };
+
+  const respondToTask = async () => {
+    if (!user || !id) return;
+    setRespondLoading(true);
+    const { data, error } = await supabase
+      .from('responses')
+      .insert({ task_id: id, master_id: user.id })
+      .select('id')
+      .single();
+    if (error) {
+      if (error.message?.includes('Maximum 5')) {
+        toast({ title: 'На этот заказ уже откликнулось 5 мастеров', variant: 'destructive' });
+      } else if (error.message?.includes('Cannot respond')) {
+        toast({ title: 'Нельзя откликнуться на свою заявку', variant: 'destructive' });
+      } else {
+        toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+      }
+    } else {
+      setMyResponseId(data.id);
+      toast({ title: 'Отклик отправлен!' });
+      await fetchData();
+    }
+    setRespondLoading(false);
+  };
+
+  const cancelMyResponse = async () => {
+    if (!myResponseId) return;
+    setRespondLoading(true);
+    const { error } = await supabase.from('responses').delete().eq('id', myResponseId);
+    if (error) {
+      toast({ title: 'Не удалось отменить отклик', description: error.message, variant: 'destructive' });
+    } else {
+      setMyResponseId(null);
+      toast({ title: 'Отклик отменён' });
+      await fetchData();
+    }
+    setRespondLoading(false);
   };
 
   if (loading) {
@@ -226,6 +309,96 @@ export default function TaskDetail() {
           )}
         </CardContent>
       </Card>
+
+      {/* Master view: client info + reviews + respond button */}
+      {isMaster && !isOwner && (
+        <>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-bold">О клиенте</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-3">
+                <ClickableAvatar src={clientProfile?.photo ?? null} name={clientProfile?.name ?? 'Клиент'} size="md" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm truncate">{clientProfile?.name || 'Клиент'}</p>
+                  <UserRating
+                    rating={clientProfile?.rating ?? null}
+                    reviewCount={clientReviews.length}
+                    size="sm"
+                    showEmpty
+                  />
+                  {clientReviews.length === 0 && (
+                    <p className="text-xs text-muted-foreground mt-0.5">0 отзывов</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Отзывы от мастеров
+                </p>
+                {clientReviews.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">У этого клиента пока нет отзывов от мастеров</p>
+                ) : (
+                  <div className="space-y-3">
+                    {clientReviews.map(rev => (
+                      <div key={rev.id} className="rounded-md border bg-card/50 p-3 space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-3.5 w-3.5 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/30'}`}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(rev.created_at), { addSuffix: true, locale: ru })}
+                          </span>
+                        </div>
+                        {rev.comment && <p className="text-sm">{rev.comment}</p>}
+                        <p className="text-xs text-muted-foreground">— {rev.reviewer_name}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <p className="text-sm font-semibold">
+                Откликнулось: {totalResponses} / 5 мастеров
+              </p>
+              {isFull && !myResponseId && (
+                <p className="text-sm text-muted-foreground">
+                  На этот заказ уже откликнулось 5 мастеров
+                </p>
+              )}
+              {myResponseId ? (
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={cancelMyResponse}
+                  disabled={respondLoading || task.status !== 'open'}
+                >
+                  {respondLoading ? 'Отмена...' : 'Отменить отклик'}
+                </Button>
+              ) : (
+                <Button
+                  className="w-full"
+                  onClick={respondToTask}
+                  disabled={respondLoading || isFull || task.status !== 'open'}
+                >
+                  {respondLoading ? 'Отправка...' : 'Откликнуться'}
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       {/* Responses section for task owner */}
       {isOwner && (

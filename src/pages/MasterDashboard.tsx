@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { CATEGORIES } from '@/lib/constants';
 import { LocateFixed } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371;
@@ -22,6 +23,7 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 export default function MasterDashboard() {
   const { user, profile } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState<any[]>([]);
   const [respondedTaskIds, setRespondedTaskIds] = useState<Set<string>>(new Set());
   const [responseCounts, setResponseCounts] = useState<Record<string, number>>({});
@@ -341,11 +343,16 @@ export default function MasterDashboard() {
             const isOwnTask = task.client_id === user?.id;
 
             return (
-              <TaskCard key={task.id} task={task} clientInfo={
-                clientProfiles[task.client_id]
-                  ? { ...clientProfiles[task.client_id], reviewCount: clientReviewCounts[task.client_id] || 0 }
-                  : undefined
-              }>
+              <TaskCard
+                key={task.id}
+                task={task}
+                onClick={() => navigate(`/task/${task.id}`)}
+                clientInfo={
+                  clientProfiles[task.client_id]
+                    ? { ...clientProfiles[task.client_id], reviewCount: clientReviewCounts[task.client_id] || 0 }
+                    : undefined
+                }
+              >
                 <div className="flex items-center justify-between mt-2 gap-2">
                   <span className="text-xs text-muted-foreground">{count}/5 откликов</span>
                   {isOwnTask ? (
