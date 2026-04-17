@@ -184,7 +184,7 @@ export default function MasterDashboard() {
       let query = supabase
         .from('tasks')
         .select('*')
-        .eq('status', 'open')
+        .in('status', ['open', 'completed', 'cancelled'])
         .not('lat', 'is', null)
         .not('lng', 'is', null)
         .order('created_at', { ascending: false });
