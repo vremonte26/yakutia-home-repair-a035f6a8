@@ -35,6 +35,28 @@ export default function MasterDashboard() {
   const [geoUnavailable, setGeoUnavailable] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [viewedIds, setViewedIds] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem('viewedTaskIds');
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set();
+    }
+  });
+
+  const markViewed = (taskId: string) => {
+    setViewedIds(prev => {
+      if (prev.has(taskId)) return prev;
+      const next = new Set(prev);
+      next.add(taskId);
+      try {
+        localStorage.setItem('viewedTaskIds', JSON.stringify([...next]));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -59,7 +81,7 @@ export default function MasterDashboard() {
       let query = supabase
         .from('tasks')
         .select('*')
-        .eq('status', 'open')
+        .in('status', ['open', 'completed', 'cancelled'])
         .order('created_at', { ascending: false });
 
       if (filter) {
@@ -67,7 +89,7 @@ export default function MasterDashboard() {
       }
 
       const { data: tasksData } = await query;
-      
+
       let filteredTasks = tasksData ?? [];
       if (useGeo) {
         filteredTasks = filteredTasks.filter(t =>
@@ -184,7 +206,7 @@ export default function MasterDashboard() {
       let query = supabase
         .from('tasks')
         .select('*')
-        .eq('status', 'open')
+        .in('status', ['open', 'completed', 'cancelled'])
         .not('lat', 'is', null)
         .not('lng', 'is', null)
         .order('created_at', { ascending: false });
@@ -330,51 +352,80 @@ export default function MasterDashboard() {
         <div className="flex items-center justify-center py-20">
           <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
         </div>
-      ) : tasks.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-muted-foreground">{geoUnavailable ? 'Включите геолокацию для отображения заказов' : 'Нет доступных заказов'}</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {tasks.map(task => {
-            const alreadyResponded = respondedTaskIds.has(task.id);
-            const count = responseCounts[task.id] || 0;
-            const isFull = count >= 5;
-            const isOwnTask = task.client_id === user?.id;
+      ) : (() => {
+        const openTasks = tasks.filter(t => t.status === 'open');
+        const historyTasks = tasks.filter(t => t.status === 'completed' || t.status === 'cancelled');
+        const activeTasks = openTasks.filter(t => !viewedIds.has(t.id) && !respondedTaskIds.has(t.id));
+        const dimmedOpenTasks = openTasks.filter(t => viewedIds.has(t.id) || respondedTaskIds.has(t.id));
 
-            return (
-              <TaskCard
-                key={task.id}
-                task={task}
-                onClick={() => navigate(`/task/${task.id}`)}
-                clientInfo={
-                  clientProfiles[task.client_id]
-                    ? { ...clientProfiles[task.client_id], reviewCount: clientReviewCounts[task.client_id] || 0 }
-                    : undefined
-                }
-              >
-                <div className="flex items-center justify-between mt-2 gap-2">
-                  <span className="text-xs text-muted-foreground">{count}/5 откликов</span>
-                  {isOwnTask ? (
-                    <span className="text-xs text-muted-foreground italic">Ваша заявка</span>
-                  ) : (
-                    <Button
-                      size="sm"
-                      disabled={alreadyResponded || isFull}
-                      onClick={e => {
-                        e.stopPropagation();
-                        respond(task.id);
-                      }}
-                    >
-                      {alreadyResponded ? '✓ Вы откликнулись' : isFull ? 'Набрано' : 'Откликнуться'}
-                    </Button>
-                  )}
+        const renderTask = (task: any, dimmed: boolean) => {
+          const alreadyResponded = respondedTaskIds.has(task.id);
+          const count = responseCounts[task.id] || 0;
+          const isFull = count >= 5;
+          const isOwnTask = task.client_id === user?.id;
+          const isHistory = task.status === 'completed' || task.status === 'cancelled';
+
+          return (
+            <TaskCard
+              key={task.id}
+              task={task}
+              dimmed={dimmed}
+              onClick={() => {
+                markViewed(task.id);
+                navigate(`/task/${task.id}`);
+              }}
+              clientInfo={
+                clientProfiles[task.client_id]
+                  ? { ...clientProfiles[task.client_id], reviewCount: clientReviewCounts[task.client_id] || 0 }
+                  : undefined
+              }
+            >
+              <div className="flex items-center justify-between mt-2 gap-2">
+                <span className="text-xs text-muted-foreground">{count}/5 откликов</span>
+                {isOwnTask ? (
+                  <span className="text-xs text-muted-foreground italic">Ваша заявка</span>
+                ) : isHistory ? (
+                  <span className="text-xs text-muted-foreground italic">Заказ закрыт</span>
+                ) : (
+                  <Button
+                    size="sm"
+                    disabled={alreadyResponded || isFull}
+                    onClick={e => {
+                      e.stopPropagation();
+                      respond(task.id);
+                    }}
+                  >
+                    {alreadyResponded ? '✓ Вы откликнулись' : isFull ? 'Набрано' : 'Откликнуться'}
+                  </Button>
+                )}
+              </div>
+            </TaskCard>
+          );
+        };
+
+        return (
+          <div className="space-y-6">
+            <section className="space-y-2">
+              <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">Активные заказы</h2>
+              {activeTasks.length === 0 ? (
+                <div className="border-t border-dashed border-muted py-2" />
+              ) : (
+                <div className="space-y-3">{activeTasks.map(t => renderTask(t, false))}</div>
+              )}
+            </section>
+
+            {(dimmedOpenTasks.length > 0 || historyTasks.length > 0) && (
+              <section className="space-y-2">
+                <h2 className="text-sm font-bold uppercase tracking-wide text-muted-foreground">История заказов</h2>
+                <div className="space-y-3">
+                  {dimmedOpenTasks.map(t => renderTask(t, true))}
+                  {historyTasks.map(t => renderTask(t, true))}
                 </div>
-              </TaskCard>
-            );
-          })}
-        </div>
-      )}
+              </section>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
