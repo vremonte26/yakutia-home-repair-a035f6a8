@@ -416,6 +416,7 @@ export default function TaskDetail() {
                 isAccepted
                 onCancel={!isCompleted ? () => setConfirmAction({ label: 'отменить мастера', action: () => cancelMaster(acceptedResponse.id) }) : undefined}
                 loading={actionLoading === acceptedResponse.id}
+                onOpen={() => navigate(`/master/${acceptedResponse.master_id}?task=${task.id}`)}
               />
             </div>
           )}
@@ -433,6 +434,7 @@ export default function TaskDetail() {
                   canAccept={!acceptedResponse && task.status === 'open'}
                   onAccept={() => acceptMaster(r.id)}
                   loading={actionLoading === r.id}
+                  onOpen={() => navigate(`/master/${r.master_id}?task=${task.id}`)}
                 />
               ))}
             </div>
@@ -505,6 +507,7 @@ function MasterCard({
   onAccept,
   onCancel,
   loading,
+  onOpen,
 }: {
   response: ResponseWithMaster;
   reviewCount: number;
@@ -513,12 +516,16 @@ function MasterCard({
   onAccept?: () => void;
   onCancel?: () => void;
   loading?: boolean;
+  onOpen?: () => void;
 }) {
   const master = response.profiles;
   if (!master) return null;
 
   return (
-    <Card className={isAccepted ? 'border-primary/50 bg-primary/5' : ''}>
+    <Card
+      className={`${isAccepted ? 'border-primary/50 bg-primary/5' : ''} ${onOpen ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}`}
+      onClick={onOpen}
+    >
       <CardContent className="p-4 space-y-2">
         <div className="flex items-center gap-3">
           <ClickableAvatar src={master.photo} name={master.name} size="md" />
@@ -540,7 +547,7 @@ function MasterCard({
           <p className="text-xs text-muted-foreground line-clamp-2">{master.about}</p>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex gap-2" onClick={e => e.stopPropagation()}>
           {canAccept && onAccept && (
             <Button size="sm" className="flex-1 gap-1" onClick={onAccept} disabled={loading}>
               <CheckCircle className="h-3.5 w-3.5" /> Выбрать
@@ -556,3 +563,4 @@ function MasterCard({
     </Card>
   );
 }
+
