@@ -7,10 +7,31 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { profile } = useAuth();
+  const { profile, user, refreshProfile } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [switching, setSwitching] = useState(false);
 
   const isMaster = profile?.role === 'master';
+
+  const toggleRole = async () => {
+    if (!user || !profile || switching) return;
+    const newRole = isMaster ? 'client' : 'master';
+    setSwitching(true);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('id', user.id);
+    if (error) {
+      toast({ title: 'Не удалось переключить роль', description: error.message, variant: 'destructive' });
+      setSwitching(false);
+      return;
+    }
+    await refreshProfile();
+    setSwitching(false);
+    navigate('/');
+  };
 
   const navItems = isMaster
     ? [
