@@ -257,28 +257,31 @@ export default function MasterDashboard() {
       );
       console.log('[GeoRefresh] Заказов в радиусе 50 км:', nearby.length);
 
-      setTasks(nearby);
       setGeoActive(true);
 
-      if (nearby.length === 0) {
-        toast({ title: 'Рядом пока нет заказов' });
-      } else {
-        toast({ title: `Найдено ${nearby.length} заказов рядом` });
-      }
-
       // refresh auxiliary data for nearby tasks
+      let visibleNearby = nearby;
       if (nearby.length > 0) {
         const taskIds = nearby.map(t => t.id);
         const [{ data: myResp }, { data: allResp }] = await Promise.all([
           supabase.from('responses').select('task_id').eq('master_id', user!.id),
           supabase.from('responses').select('task_id').in('task_id', taskIds).neq('status', 'rejected'),
         ]);
-        setRespondedTaskIds(new Set((myResp ?? []).map(r => r.task_id)));
+        const myRespSet = new Set((myResp ?? []).map(r => r.task_id));
+        setRespondedTaskIds(myRespSet);
         const counts: Record<string, number> = {};
         (allResp ?? []).forEach(r => { counts[r.task_id] = (counts[r.task_id] || 0) + 1; });
         setResponseCounts(counts);
 
-        const clientIds = [...new Set(nearby.map(t => t.client_id))];
+        // Hide open tasks with 5+ responses (unless current master responded)
+        visibleNearby = nearby.filter(t => {
+          if (t.status !== 'open') return true;
+          const c = counts[t.id] || 0;
+          if (c < 5) return true;
+          return myRespSet.has(t.id);
+        });
+
+        const clientIds = [...new Set(visibleNearby.map(t => t.client_id))];
         const [{ data: profs }, { data: revs }] = await Promise.all([
           supabase.from('profiles').select('id, name, rating').in('id', clientIds),
           supabase.from('reviews').select('to_user').in('to_user', clientIds),
@@ -289,6 +292,14 @@ export default function MasterDashboard() {
         const rc: Record<string, number> = {};
         (revs ?? []).forEach((r: any) => { rc[r.to_user] = (rc[r.to_user] || 0) + 1; });
         setClientReviewCounts(rc);
+      }
+
+      setTasks(visibleNearby);
+
+      if (visibleNearby.length === 0) {
+        toast({ title: 'Рядом пока нет заказов' });
+      } else {
+        toast({ title: `Найдено ${visibleNearby.length} заказов рядом` });
       }
     } catch (err: any) {
       if (err?.code === 1) {
