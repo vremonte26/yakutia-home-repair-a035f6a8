@@ -62,9 +62,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <div className="flex items-center gap-2">
             {profile && <NotificationBell />}
             {profile && (
-              <span className="text-xs px-2 py-1 rounded-full bg-accent text-accent-foreground font-medium">
+              <button
+                type="button"
+                onClick={toggleRole}
+                disabled={switching}
+                title="Переключить роль"
+                className="text-xs px-2 py-1 rounded-full bg-accent text-accent-foreground font-medium hover:bg-accent/80 transition-colors disabled:opacity-60"
+              >
                 {isMaster ? '🔧 Мастер' : '👤 Клиент'}
-              </span>
+              </button>
             )}
           </div>
         </div>
