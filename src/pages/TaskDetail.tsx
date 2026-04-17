@@ -310,6 +310,96 @@ export default function TaskDetail() {
         </CardContent>
       </Card>
 
+      {/* Master view: client info + reviews + respond button */}
+      {isMaster && !isOwner && (
+        <>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-bold">О клиенте</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center gap-3">
+                <ClickableAvatar src={clientProfile?.photo ?? null} name={clientProfile?.name ?? 'Клиент'} size="md" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm truncate">{clientProfile?.name || 'Клиент'}</p>
+                  <UserRating
+                    rating={clientProfile?.rating ?? null}
+                    reviewCount={clientReviews.length}
+                    size="sm"
+                    showEmpty
+                  />
+                  {clientReviews.length === 0 && (
+                    <p className="text-xs text-muted-foreground mt-0.5">0 отзывов</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Отзывы от мастеров
+                </p>
+                {clientReviews.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">У этого клиента пока нет отзывов от мастеров</p>
+                ) : (
+                  <div className="space-y-3">
+                    {clientReviews.map(rev => (
+                      <div key={rev.id} className="rounded-md border bg-card/50 p-3 space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <Star
+                                key={i}
+                                className={`h-3.5 w-3.5 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/30'}`}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(rev.created_at), { addSuffix: true, locale: ru })}
+                          </span>
+                        </div>
+                        {rev.comment && <p className="text-sm">{rev.comment}</p>}
+                        <p className="text-xs text-muted-foreground">— {rev.reviewer_name}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <p className="text-sm font-semibold">
+                Откликнулось: {totalResponses} / 5 мастеров
+              </p>
+              {isFull && !myResponseId && (
+                <p className="text-sm text-muted-foreground">
+                  На этот заказ уже откликнулось 5 мастеров
+                </p>
+              )}
+              {myResponseId ? (
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  onClick={cancelMyResponse}
+                  disabled={respondLoading || task.status !== 'open'}
+                >
+                  {respondLoading ? 'Отмена...' : 'Отменить отклик'}
+                </Button>
+              ) : (
+                <Button
+                  className="w-full"
+                  onClick={respondToTask}
+                  disabled={respondLoading || isFull || task.status !== 'open'}
+                >
+                  {respondLoading ? 'Отправка...' : 'Откликнуться'}
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
+
       {/* Responses section for task owner */}
       {isOwner && (
         <div className="space-y-3">
