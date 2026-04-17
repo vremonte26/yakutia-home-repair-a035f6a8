@@ -35,6 +35,28 @@ export default function MasterDashboard() {
   const [geoUnavailable, setGeoUnavailable] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [viewedIds, setViewedIds] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem('viewedTaskIds');
+      return new Set(raw ? JSON.parse(raw) : []);
+    } catch {
+      return new Set();
+    }
+  });
+
+  const markViewed = (taskId: string) => {
+    setViewedIds(prev => {
+      if (prev.has(taskId)) return prev;
+      const next = new Set(prev);
+      next.add(taskId);
+      try {
+        localStorage.setItem('viewedTaskIds', JSON.stringify([...next]));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     const fetchTasks = async () => {
