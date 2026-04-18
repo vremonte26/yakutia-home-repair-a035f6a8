@@ -1,7 +1,5 @@
-import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
-import { SplashScreen } from "./components/SplashScreen";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -37,7 +35,6 @@ function AppRoutes() {
     );
   }
 
-  // Not authenticated
   if (!user) {
     return (
       <Routes>
@@ -46,9 +43,7 @@ function AppRoutes() {
     );
   }
 
-  // Authenticated but onboarding not complete
   if (profile && !profile.name) {
-    // Master already selected role but hasn't filled the form yet
     if (profile.role === 'master') {
       return (
         <Routes>
@@ -58,7 +53,6 @@ function AppRoutes() {
         </Routes>
       );
     }
-    // No role selected yet (default 'client' with empty name)
     return (
       <Routes>
         <Route path="/role-selection" element={<RoleSelection />} />
@@ -91,11 +85,8 @@ function AppRoutes() {
 }
 
 function App() {
-  const [showSplash, setShowSplash] = useState(true);
-
   return (
     <QueryClientProvider client={queryClient}>
-      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} duration={7000} />}
       <BrowserRouter>
         <AuthProvider>
           <TooltipProvider>
