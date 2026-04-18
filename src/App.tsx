@@ -91,8 +91,11 @@ function AppRoutes() {
 }
 
 function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
   return (
     <QueryClientProvider client={queryClient}>
+      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} duration={3000} />}
       <BrowserRouter>
         <AuthProvider>
           <TooltipProvider>
