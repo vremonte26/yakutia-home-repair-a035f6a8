@@ -322,7 +322,7 @@ export default function ChatRoom() {
   }
 
   return (
-    <div className="flex flex-col -mx-4 -mt-4 -mb-20" style={{ height: 'calc(100dvh - var(--app-header-h, 96px))' }}>
+    <div className="flex flex-col -mx-4 -mt-4" style={{ height: 'calc(100dvh - var(--app-header-h, 96px) - 64px)' }}>
       {/* Header */}
       <div className="flex items-center gap-3 px-2 py-3 border-b bg-background/95 backdrop-blur-md shadow-sm shrink-0 sticky top-0 z-20">
         <Button variant="ghost" size="icon" onClick={() => navigate('/chats')} className="shrink-0">
