@@ -139,25 +139,35 @@ export default function AuthPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex justify-center py-2">
+          <div className="flex flex-col items-center py-2 gap-3">
             <InputOTP
               ref={otpInputRef}
               maxLength={6}
               value={otpValue}
-              onChange={setOtpValue}
+              onChange={(v) => { setOtpValue(v); if (errorMsg) setErrorMsg(''); }}
               autoFocus
               data-input-otp="true"
             >
               <InputOTPGroup className="gap-2">
-                {[0, 1, 2, 3, 4, 5].map(i => (
-                  <InputOTPSlot
-                    key={i}
-                    index={i}
-                    className="h-14 w-11 sm:w-12 text-2xl font-bold border-2 border-neutral-300 rounded-lg text-neutral-900 first:rounded-l-lg last:rounded-r-lg"
-                  />
-                ))}
+                {[0, 1, 2, 3, 4, 5].map(i => {
+                  const filled = otpValue.length > i;
+                  return (
+                    <InputOTPSlot
+                      key={i}
+                      index={i}
+                      className={`h-14 w-11 sm:w-12 text-2xl font-bold border-2 rounded-lg first:rounded-l-lg last:rounded-r-lg transition-colors ${
+                        filled
+                          ? 'bg-[#FFC107] border-[#FFC107] text-[#4A4A4A]'
+                          : 'bg-transparent border-[#D1D5DB] text-[#4A4A4A]'
+                      }`}
+                    />
+                  );
+                })}
               </InputOTPGroup>
             </InputOTP>
+            {errorMsg && (
+              <p className="text-sm text-neutral-600">{errorMsg}</p>
+            )}
           </div>
 
           <Button
