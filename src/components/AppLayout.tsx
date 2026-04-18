@@ -1,10 +1,11 @@
 import { ReactNode, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, PlusCircle, User, Wrench, ClipboardList, Map, MessageCircle } from 'lucide-react';
+import { Home, PlusCircle, User, Wrench, ClipboardList, Map, MessageCircle, MapPin } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useUserLocation } from '@/hooks/useUserLocation';
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { profile, user, refreshProfile } = useAuth();
@@ -12,6 +13,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [switching, setSwitching] = useState(false);
+  const locationLabel = useUserLocation();
 
   const isMaster = profile?.role === 'master';
 
@@ -74,6 +76,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
             )}
           </div>
         </div>
+        {locationLabel && (
+          <div className="container mt-1.5 flex items-center gap-1 text-xs text-secondary-foreground/80">
+            <MapPin className="h-3 w-3 shrink-0" />
+            <span className="truncate">{locationLabel}</span>
+          </div>
+        )}
       </header>
 
       <main className="flex-1 container py-4 pb-20">
