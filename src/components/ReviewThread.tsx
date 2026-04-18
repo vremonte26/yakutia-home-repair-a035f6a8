@@ -283,12 +283,15 @@ export function ReviewThread({
     );
   };
 
+  const sortedRoots = [...roots].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const showAllRoots = !collapsible || rootsExpanded;
+  const visibleRoots = showAllRoots ? sortedRoots : sortedRoots.slice(0, initialCount);
+  const hiddenRootsCount = sortedRoots.length - visibleRoots.length;
+
   return (
     <>
       <div className="space-y-3">
-        {roots
-          .sort((a, b) => b.created_at.localeCompare(a.created_at))
-          .map(root => {
+        {visibleRoots.map(root => {
             const replies = repliesOf(root.id);
             const expanded = expandedThreads.has(root.id);
             const visibleReplies = expanded ? replies : replies.slice(0, 1);
@@ -335,6 +338,16 @@ export function ReviewThread({
               </div>
             );
           })}
+
+        {hiddenRootsCount > 0 && (
+          <button
+            type="button"
+            onClick={handleExpandRoots}
+            className="w-full inline-flex items-center justify-center gap-1 text-sm text-primary hover:underline py-2"
+          >
+            <ChevronDown className="h-4 w-4" /> Показать ещё (+{hiddenRootsCount})
+          </button>
+        )}
       </div>
 
       <Dialog open={!!complaintFor} onOpenChange={(v) => { if (!v) setComplaintFor(null); }}>
