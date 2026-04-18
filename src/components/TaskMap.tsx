@@ -81,43 +81,29 @@ export function TaskMap({ mode }: TaskMapProps) {
 
   const autoTriggeredRef = useRef(false);
 
-  const requestGeolocation = useCallback(() => {
+  const requestGeolocation = useCallback(async (forcePrompt = false) => {
     setLoading(true);
     setGeoError(null);
 
-    if (!navigator.geolocation) {
-      setGeoState('error');
-      setGeoError('Геолокация недоступна в вашем браузере или устройстве');
+    try {
+      const { lat, lng } = await getCurrentPosition({ forcePrompt });
+      setCenter({ lat, lng });
+      setShowUserPin(true);
+      setGeoState('granted');
       setLoading(false);
-      return;
+    } catch (err: any) {
+      setLoading(false);
+      const msg = err?.message;
+      if (msg === 'geo_denied') {
+        setGeoState('denied');
+      } else if (msg === 'geo_unsupported') {
+        setGeoState('error');
+        setGeoError('Геолокация недоступна в вашем браузере или устройстве');
+      } else {
+        setGeoState('error');
+        setGeoError('Не удалось определить местоположение.');
+      }
     }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setCenter({ lat: position.coords.latitude, lng: position.coords.longitude });
-        setShowUserPin(true);
-        setGeoState('granted');
-        saveGeoPermission('granted');
-        setLoading(false);
-      },
-      (err) => {
-        setLoading(false);
-        if (err.code === err.PERMISSION_DENIED) {
-          setGeoState('denied');
-          saveGeoPermission('denied');
-        } else if (err.code === err.POSITION_UNAVAILABLE) {
-          setGeoState('error');
-          setGeoError('Геолокация недоступна. Проверьте настройки устройства.');
-        } else if (err.code === err.TIMEOUT) {
-          setGeoState('error');
-          setGeoError('Не удалось определить местоположение — истекло время ожидания.');
-        } else {
-          setGeoState('error');
-          setGeoError('Не удалось определить местоположение.');
-        }
-      },
-      { enableHighAccuracy: false, timeout: 10000 }
-    );
   }, []);
 
   // Auto-request geolocation if previously granted
