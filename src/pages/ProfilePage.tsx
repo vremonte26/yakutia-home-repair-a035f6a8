@@ -10,6 +10,7 @@ import { UserRating } from '@/components/UserRating';
 import { LogOut, ArrowLeftRight, Phone, Clock, X, Trash2, Pencil, Camera, Check, LocateOff, Shield } from 'lucide-react';
 import { ReviewThread } from '@/components/ReviewThread';
 import ClickableAvatar from '@/components/ClickableAvatar';
+import { AdminPanelButton } from '@/components/AdminPanelButton';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { resetGeoPermission } from '@/lib/geolocation';
