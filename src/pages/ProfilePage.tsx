@@ -37,16 +37,35 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [reviewCount, setReviewCount] = useState(0);
+  const [unreadReviews, setUnreadReviews] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const lastSeenKey = user ? `reviews:lastSeen:${user.id}` : '';
 
   useEffect(() => {
     if (!user) return;
+    const lastSeen = localStorage.getItem(lastSeenKey);
     supabase
       .from('reviews')
-      .select('id')
+      .select('id, from_user, created_at, parent_id, is_hidden')
       .eq('to_user', user.id)
-      .then(({ data }) => setReviewCount(data?.length ?? 0));
-  }, [user]);
+      .is('parent_id', null)
+      .eq('is_hidden', false)
+      .then(({ data }) => {
+        const rows = data ?? [];
+        setReviewCount(rows.length);
+        const unread = rows.filter(
+          r => r.from_user !== user.id && (!lastSeen || r.created_at > lastSeen)
+        ).length;
+        setUnreadReviews(unread);
+      });
+  }, [user, lastSeenKey]);
+
+  const markReviewsSeen = () => {
+    if (!user || unreadReviews === 0) return;
+    localStorage.setItem(lastSeenKey, new Date().toISOString());
+    setUnreadReviews(0);
+  };
 
   if (!profile) return null;
 
