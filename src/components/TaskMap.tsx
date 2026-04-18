@@ -266,7 +266,7 @@ export function TaskMap({ mode }: TaskMapProps) {
           <p className="text-sm text-muted-foreground mt-1">Чтобы показать заказы и мастеров рядом с вами</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => { setStoredPermissionDenied(); setGeoState('denied'); }}>Запретить</Button>
+          <Button variant="outline" onClick={() => { setStoredPermission('denied'); setGeoState('denied'); }}>Запретить</Button>
           <Button onClick={() => requestGeolocation()}>Разрешить</Button>
         </div>
       </div>
