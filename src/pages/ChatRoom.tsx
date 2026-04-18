@@ -399,7 +399,7 @@ export default function ChatRoom() {
 
       {/* Input or readonly banner */}
       {chatState === 'active' ? (
-        <form onSubmit={handleSubmit} className="flex items-center gap-2 px-3 py-2 border-t bg-background/95 backdrop-blur-md shadow-[0_-2px_8px_rgba(0,0,0,0.04)] shrink-0 sticky bottom-0 z-20">
+        <form onSubmit={handleSubmit} className="flex items-center gap-2 px-3 py-2 border-t bg-background/95 backdrop-blur-md shadow-[0_-2px_8px_rgba(0,0,0,0.04)] shrink-0 sticky bottom-0 z-20" style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}>
           <input
             ref={fileInputRef}
             type="file"
