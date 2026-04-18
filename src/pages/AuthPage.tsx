@@ -3,12 +3,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Wrench } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-const TEST_OTP_CODE = '123456';
+const OTP_LENGTH = 4;
+const TEST_OTP_CODE = '1234';
 const RESEND_SECONDS = 60;
 
 export default function AuthPage() {
