@@ -44,7 +44,7 @@ interface ReviewThreadProps {
 export function ReviewThread({ profileUserId, refreshKey = 0, emptyText = 'Нет отзывов' }: ReviewThreadProps) {
   const { user, profile } = useAuth();
   const { toast } = useToast();
-  const isModerator = profile?.role === 'moderator';
+  const isModerator = (profile?.role as string) === 'moderator';
 
   const [allReviews, setAllReviews] = useState<ReviewRow[]>([]);
   const [authors, setAuthors] = useState<AuthorMap>({});

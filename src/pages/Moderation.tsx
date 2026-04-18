@@ -32,7 +32,7 @@ export default function Moderation() {
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    if (profile && profile.role !== 'moderator') {
+    if (profile && (profile.role as string) !== 'moderator') {
       navigate('/');
     }
   }, [profile, navigate]);
