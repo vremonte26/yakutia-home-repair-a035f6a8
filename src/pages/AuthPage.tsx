@@ -64,9 +64,15 @@ export default function AuthPage() {
 
   const handleVerifyOtp = async () => {
     if (otpValue !== TEST_OTP_CODE) {
-      toast({ title: 'Неверный код', description: 'Попробуйте ещё раз', variant: 'destructive' });
+      setOtpValue('');
+      setErrorMsg('Неверный код. Попробуйте ещё раз');
+      setTimeout(() => {
+        const input = document.querySelector<HTMLInputElement>('[data-input-otp="true"]');
+        input?.focus();
+      }, 50);
       return;
     }
+    setErrorMsg('');
     setLoading(true);
     try {
       const fakeEmail = `${phone.replace(/\D/g, '')}@vremonte.local`;
