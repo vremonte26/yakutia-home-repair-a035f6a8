@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { SplashScreen } from "./components/SplashScreen";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -89,8 +91,11 @@ function AppRoutes() {
 }
 
 function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
   return (
     <QueryClientProvider client={queryClient}>
+      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} duration={3000} />}
       <BrowserRouter>
         <AuthProvider>
           <TooltipProvider>
