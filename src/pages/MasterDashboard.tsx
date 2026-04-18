@@ -221,10 +221,7 @@ export default function MasterDashboard() {
     }
     setGeoLoading(true);
     try {
-      const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
-      );
-      const { latitude, longitude } = pos.coords;
+      const { lat: latitude, lng: longitude } = await getCurrentPosition({ forcePrompt: true });
       console.log('[GeoRefresh] Координаты мастера:', { latitude, longitude });
 
       let query = supabase
