@@ -7,8 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CategoryBadge, deduplicateCategories } from '@/components/CategoryBadge';
 import { UserRating } from '@/components/UserRating';
-import { LogOut, ArrowLeftRight, Phone, Clock, X, Trash2, Pencil, Camera, Check, LocateOff, Shield } from 'lucide-react';
-import { ReviewThread } from '@/components/ReviewThread';
+import { LogOut, ArrowLeftRight, Phone, Clock, X, Trash2, Pencil, Camera, Check, LocateOff, Shield, Star, ChevronRight } from 'lucide-react';
 import ClickableAvatar from '@/components/ClickableAvatar';
 import { AdminPanelButton } from '@/components/AdminPanelButton';
 import { useNavigate } from 'react-router-dom';
@@ -315,27 +314,27 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base font-bold flex items-center gap-2">
-            <span>{isMaster ? 'Отзывы о вас от клиентов' : 'Отзывы о вас от мастеров'}</span>
-            {unreadReviews > 0 && (
-              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold">
-                {unreadReviews > 99 ? '99+' : unreadReviews}
-              </span>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent onClick={markReviewsSeen}>
-          <ReviewThread
-            profileUserId={user!.id}
-            emptyText="Нет отзывов"
-            collapsible
-            initialCount={3}
-            onExpand={markReviewsSeen}
-          />
-        </CardContent>
-      </Card>
+      <button
+        type="button"
+        onClick={() => navigate('/my-reviews')}
+        className="w-full flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-amber-400/15 flex items-center justify-center">
+            <Star className="h-5 w-5 fill-amber-400 text-amber-400" />
+          </div>
+          <span className="font-semibold">Отзывы обо мне</span>
+          {unreadReviews > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold">
+              {unreadReviews > 99 ? '99+' : unreadReviews}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 text-muted-foreground text-sm">
+          <span>{reviewCount}</span>
+          <ChevronRight className="h-4 w-4" />
+        </div>
+      </button>
 
       <div className="space-y-2">
         <AdminPanelButton />
