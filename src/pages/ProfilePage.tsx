@@ -320,7 +320,7 @@ export default function ProfilePage() {
           variant="outline"
           className="w-full"
           onClick={() => {
-            localStorage.removeItem('geo_permission');
+            resetGeoPermission();
             toast({ title: 'Разрешение на геолокацию сброшено. При следующем открытии карты браузер запросит его снова.' });
           }}
         >
