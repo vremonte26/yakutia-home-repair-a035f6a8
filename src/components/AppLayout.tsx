@@ -101,7 +101,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-lg border-t">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-lg border-t shadow-[0_-2px_8px_rgba(0,0,0,0.04)]" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <div className="container flex justify-around py-2">
           {navItems.map(item => {
             const active = location.pathname === item.to;
