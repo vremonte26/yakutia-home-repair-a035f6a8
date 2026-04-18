@@ -45,6 +45,8 @@ interface ReviewThreadProps {
   initialCount?: number;
   /** Called once when the user expands the collapsed list (used to reset unread badge) */
   onExpand?: () => void;
+  /** Filter root reviews by exact rating value */
+  ratingFilter?: number;
 }
 
 export function ReviewThread({
@@ -54,6 +56,7 @@ export function ReviewThread({
   collapsible = false,
   initialCount = 3,
   onExpand,
+  ratingFilter,
 }: ReviewThreadProps) {
   const { user, profile } = useAuth();
   const { toast } = useToast();
@@ -202,7 +205,10 @@ export function ReviewThread({
     return <p className="text-sm text-muted-foreground">Загрузка...</p>;
   }
 
-  const roots = allReviews.filter(r => r.parent_id === null);
+  const roots = allReviews.filter(r =>
+    r.parent_id === null &&
+    (ratingFilter === undefined || r.rating === ratingFilter)
+  );
   if (roots.length === 0) {
     return <p className="text-sm text-muted-foreground">{emptyText}</p>;
   }
