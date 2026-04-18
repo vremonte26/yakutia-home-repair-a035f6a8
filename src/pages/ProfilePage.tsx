@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CategoryBadge, deduplicateCategories } from '@/components/CategoryBadge';
 import { UserRating } from '@/components/UserRating';
-import { LogOut, ArrowLeftRight, MapPin, Phone, Clock, X, Trash2, Pencil, Camera, Check, LocateOff } from 'lucide-react';
+import { LogOut, ArrowLeftRight, Phone, Clock, X, Trash2, Pencil, Camera, Check, LocateOff, Shield } from 'lucide-react';
+import { ReviewThread } from '@/components/ReviewThread';
 import ClickableAvatar from '@/components/ClickableAvatar';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
@@ -293,7 +294,24 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base font-bold">
+            {isMaster ? 'Отзывы о вас от клиентов' : 'Отзывы о вас от мастеров'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ReviewThread profileUserId={user!.id} emptyText="Нет отзывов" />
+        </CardContent>
+      </Card>
+
       <div className="space-y-2">
+        {(profile.role as string) === 'moderator' && (
+          <Button variant="outline" className="w-full" onClick={() => navigate('/moderation')}>
+            <Shield className="h-4 w-4 mr-2" />
+            Модерация жалоб
+          </Button>
+        )}
         <Button variant="outline" className="w-full" onClick={switchRole}>
           <ArrowLeftRight className="h-4 w-4 mr-2" />
           {isMaster ? 'Стать клиентом' : 'Стать мастером'}

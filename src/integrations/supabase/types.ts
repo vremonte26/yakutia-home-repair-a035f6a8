@@ -19,7 +19,12 @@ export type Database = {
           created_at: string
           from_user: string
           id: string
+          moderator_note: string | null
           reason: string
+          resolved_at: string | null
+          resolved_by: string | null
+          review_id: string | null
+          status: string
           task_id: string | null
           to_user: string
         }
@@ -27,7 +32,12 @@ export type Database = {
           created_at?: string
           from_user: string
           id?: string
+          moderator_note?: string | null
           reason: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_id?: string | null
+          status?: string
           task_id?: string | null
           to_user: string
         }
@@ -35,7 +45,12 @@ export type Database = {
           created_at?: string
           from_user?: string
           id?: string
+          moderator_note?: string | null
           reason?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_id?: string | null
+          status?: string
           task_id?: string | null
           to_user?: string
         }
@@ -45,6 +60,13 @@ export type Database = {
             columns: ["from_user"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "complaints_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "reviews"
             referencedColumns: ["id"]
           },
           {
@@ -246,8 +268,11 @@ export type Database = {
           comment: string | null
           created_at: string
           from_user: string
+          hidden_reason: string | null
           id: string
-          rating: number
+          is_hidden: boolean
+          parent_id: string | null
+          rating: number | null
           task_id: string | null
           to_user: string
         }
@@ -255,8 +280,11 @@ export type Database = {
           comment?: string | null
           created_at?: string
           from_user: string
+          hidden_reason?: string | null
           id?: string
-          rating: number
+          is_hidden?: boolean
+          parent_id?: string | null
+          rating?: number | null
           task_id?: string | null
           to_user: string
         }
@@ -264,8 +292,11 @@ export type Database = {
           comment?: string | null
           created_at?: string
           from_user?: string
+          hidden_reason?: string | null
           id?: string
-          rating?: number
+          is_hidden?: boolean
+          parent_id?: string | null
+          rating?: number | null
           task_id?: string | null
           to_user?: string
         }
@@ -275,6 +306,13 @@ export type Database = {
             columns: ["from_user"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "reviews"
             referencedColumns: ["id"]
           },
           {
@@ -357,10 +395,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_moderator: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "client" | "master"
+      app_role: "client" | "master" | "moderator"
       response_status: "pending" | "accepted" | "rejected"
       task_status: "open" | "in_progress" | "completed" | "cancelled"
     }
@@ -490,7 +528,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["client", "master"],
+      app_role: ["client", "master", "moderator"],
       response_status: ["pending", "accepted", "rejected"],
       task_status: ["open", "in_progress", "completed", "cancelled"],
     },
