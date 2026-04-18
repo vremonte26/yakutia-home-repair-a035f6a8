@@ -74,7 +74,7 @@ export function TaskMap({ mode }: TaskMapProps) {
   const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [geoState, setGeoState] = useState<GeoState>(getSavedGeoPermission);
+  const [geoState, setGeoState] = useState<GeoState>(initialGeoState);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [showUserPin, setShowUserPin] = useState(false);
