@@ -5,6 +5,11 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Navigation, Locate } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Map, Marker } from '@2gis/mapgl/types';
+import {
+  getCurrentPosition,
+  getStoredPermission,
+  GEO_DENIED_MESSAGE,
+} from '@/lib/geolocation';
 
 const DGIS_API_KEY = 'f36bed16-b4cb-48a6-8b12-541f54023ec7';
 
