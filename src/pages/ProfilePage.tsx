@@ -307,12 +307,7 @@ export default function ProfilePage() {
       </Card>
 
       <div className="space-y-2">
-        {(profile.role as string) === 'moderator' && (
-          <Button variant="outline" className="w-full" onClick={() => navigate('/moderation')}>
-            <Shield className="h-4 w-4 mr-2" />
-            Модерация жалоб
-          </Button>
-        )}
+        <AdminPanelButton />
         <Button variant="outline" className="w-full" onClick={switchRole}>
           <ArrowLeftRight className="h-4 w-4 mr-2" />
           {isMaster ? 'Стать клиентом' : 'Стать мастером'}
