@@ -281,7 +281,7 @@ export function TaskMap({ mode }: TaskMapProps) {
           Без геолокации карта не может показать заказы рядом. Разрешите доступ в настройках браузера или сбросьте разрешение в профиле.
         </p>
         {geoError && <p className="text-xs text-destructive">{geoError}</p>}
-        <Button variant="outline" size="sm" onClick={requestGeolocation}>
+        <Button variant="outline" size="sm" onClick={() => requestGeolocation(true)}>
           Попробовать снова
         </Button>
       </div>
