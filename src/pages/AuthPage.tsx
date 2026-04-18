@@ -17,6 +17,7 @@ export default function AuthPage() {
   const [otpValue, setOtpValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
+  const [errorMsg, setErrorMsg] = useState('');
   const otpInputRef = useRef<HTMLInputElement>(null);
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
