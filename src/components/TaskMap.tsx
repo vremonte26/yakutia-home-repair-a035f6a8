@@ -43,16 +43,11 @@ function obfuscateCoords(lat: number, lng: number): [number, number] {
 
 type GeoState = 'asking' | 'denied' | 'granted' | 'error';
 
-const GEO_PERMISSION_KEY = 'geo_permission';
-
-function getSavedGeoPermission(): GeoState {
-  const saved = localStorage.getItem(GEO_PERMISSION_KEY);
-  if (saved === 'granted' || saved === 'denied') return saved;
+function initialGeoState(): GeoState {
+  const p = getStoredPermission();
+  if (p === 'granted') return 'granted';
+  if (p === 'denied') return 'denied';
   return 'asking';
-}
-
-function saveGeoPermission(state: 'granted' | 'denied') {
-  localStorage.setItem(GEO_PERMISSION_KEY, state);
 }
 
 function loadMapglScript(): Promise<void> {
