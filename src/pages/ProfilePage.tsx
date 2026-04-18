@@ -37,16 +37,35 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [reviewCount, setReviewCount] = useState(0);
+  const [unreadReviews, setUnreadReviews] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const lastSeenKey = user ? `reviews:lastSeen:${user.id}` : '';
 
   useEffect(() => {
     if (!user) return;
+    const lastSeen = localStorage.getItem(lastSeenKey);
     supabase
       .from('reviews')
-      .select('id')
+      .select('id, from_user, created_at, parent_id, is_hidden')
       .eq('to_user', user.id)
-      .then(({ data }) => setReviewCount(data?.length ?? 0));
-  }, [user]);
+      .is('parent_id', null)
+      .eq('is_hidden', false)
+      .then(({ data }) => {
+        const rows = data ?? [];
+        setReviewCount(rows.length);
+        const unread = rows.filter(
+          r => r.from_user !== user.id && (!lastSeen || r.created_at > lastSeen)
+        ).length;
+        setUnreadReviews(unread);
+      });
+  }, [user, lastSeenKey]);
+
+  const markReviewsSeen = () => {
+    if (!user || unreadReviews === 0) return;
+    localStorage.setItem(lastSeenKey, new Date().toISOString());
+    setUnreadReviews(0);
+  };
 
   if (!profile) return null;
 
@@ -298,12 +317,23 @@ export default function ProfilePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-bold">
-            {isMaster ? 'Отзывы о вас от клиентов' : 'Отзывы о вас от мастеров'}
+          <CardTitle className="text-base font-bold flex items-center gap-2">
+            <span>{isMaster ? 'Отзывы о вас от клиентов' : 'Отзывы о вас от мастеров'}</span>
+            {unreadReviews > 0 && (
+              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold">
+                {unreadReviews > 99 ? '99+' : unreadReviews}
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <ReviewThread profileUserId={user!.id} emptyText="Нет отзывов" />
+        <CardContent onClick={markReviewsSeen}>
+          <ReviewThread
+            profileUserId={user!.id}
+            emptyText="Нет отзывов"
+            collapsible
+            initialCount={3}
+            onExpand={markReviewsSeen}
+          />
         </CardContent>
       </Card>
 

@@ -39,9 +39,22 @@ interface ReviewThreadProps {
   /** Triggers a refetch externally */
   refreshKey?: number;
   emptyText?: string;
+  /** If true, collapse root reviews after `initialCount` and show "Show more" button */
+  collapsible?: boolean;
+  /** How many root reviews to show initially when collapsible (default 3) */
+  initialCount?: number;
+  /** Called once when the user expands the collapsed list (used to reset unread badge) */
+  onExpand?: () => void;
 }
 
-export function ReviewThread({ profileUserId, refreshKey = 0, emptyText = 'Нет отзывов' }: ReviewThreadProps) {
+export function ReviewThread({
+  profileUserId,
+  refreshKey = 0,
+  emptyText = 'Нет отзывов',
+  collapsible = false,
+  initialCount = 3,
+  onExpand,
+}: ReviewThreadProps) {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const isModerator = (profile?.role as string) === 'moderator';
@@ -51,6 +64,12 @@ export function ReviewThread({ profileUserId, refreshKey = 0, emptyText = 'Не�
   const [loading, setLoading] = useState(true);
   const [internalKey, setInternalKey] = useState(0);
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
+  const [rootsExpanded, setRootsExpanded] = useState(false);
+
+  const handleExpandRoots = () => {
+    setRootsExpanded(true);
+    onExpand?.();
+  };
 
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
@@ -264,12 +283,15 @@ export function ReviewThread({ profileUserId, refreshKey = 0, emptyText = 'Не�
     );
   };
 
+  const sortedRoots = [...roots].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const showAllRoots = !collapsible || rootsExpanded;
+  const visibleRoots = showAllRoots ? sortedRoots : sortedRoots.slice(0, initialCount);
+  const hiddenRootsCount = sortedRoots.length - visibleRoots.length;
+
   return (
     <>
       <div className="space-y-3">
-        {roots
-          .sort((a, b) => b.created_at.localeCompare(a.created_at))
-          .map(root => {
+        {visibleRoots.map(root => {
             const replies = repliesOf(root.id);
             const expanded = expandedThreads.has(root.id);
             const visibleReplies = expanded ? replies : replies.slice(0, 1);
@@ -316,6 +338,16 @@ export function ReviewThread({ profileUserId, refreshKey = 0, emptyText = 'Не�
               </div>
             );
           })}
+
+        {hiddenRootsCount > 0 && (
+          <button
+            type="button"
+            onClick={handleExpandRoots}
+            className="w-full inline-flex items-center justify-center gap-1 text-sm text-primary hover:underline py-2"
+          >
+            <ChevronDown className="h-4 w-4" /> Показать ещё (+{hiddenRootsCount})
+          </button>
+        )}
       </div>
 
       <Dialog open={!!complaintFor} onOpenChange={(v) => { if (!v) setComplaintFor(null); }}>
