@@ -8,7 +8,7 @@ import { Map, Marker } from '@2gis/mapgl/types';
 import {
   getCurrentPosition,
   getStoredPermission,
-  GEO_DENIED_MESSAGE,
+  setStoredPermission,
 } from '@/lib/geolocation';
 
 const DGIS_API_KEY = 'f36bed16-b4cb-48a6-8b12-541f54023ec7';
