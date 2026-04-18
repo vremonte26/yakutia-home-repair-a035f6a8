@@ -17,6 +17,8 @@ import ProfilePage from "./pages/ProfilePage";
 import { AppLayout } from "./components/AppLayout";
 import TaskDetail from "./pages/TaskDetail";
 import MasterProfile from "./pages/MasterProfile";
+import ClientProfile from "./pages/ClientProfile";
+import Moderation from "./pages/Moderation";
 import MapPage from "./pages/MapPage";
 import NotFound from "./pages/NotFound";
 
@@ -76,6 +78,8 @@ function AppRoutes() {
       <Route path="/my-responses" element={<AppLayout><MyResponses /></AppLayout>} />
       <Route path="/task/:id" element={<AppLayout><TaskDetail /></AppLayout>} />
       <Route path="/master/:id" element={<AppLayout><MasterProfile /></AppLayout>} />
+      <Route path="/client/:id" element={<AppLayout><ClientProfile /></AppLayout>} />
+      <Route path="/moderation" element={<AppLayout><Moderation /></AppLayout>} />
       <Route path="/chats" element={<AppLayout><ChatList /></AppLayout>} />
       <Route path="/chat/:taskId" element={<AppLayout><ChatRoom /></AppLayout>} />
       <Route path="/profile" element={<AppLayout><ProfilePage /></AppLayout>} />
