@@ -436,7 +436,7 @@ export default function ChatRoom() {
           </Button>
         </form>
       ) : (
-        <div className="px-3 py-3 border-t bg-muted/50 text-center shrink-0">
+        <div className="px-3 py-3 border-t bg-muted/50 backdrop-blur-md text-center shrink-0 sticky bottom-0 z-20 shadow-[0_-2px_8px_rgba(0,0,0,0.04)]">
           <p className="text-xs text-muted-foreground">
             {chatState === 'readonly' ? 'Заказ завершён. Чат доступен только для чтения.' : 'Чат недоступен'}
           </p>
