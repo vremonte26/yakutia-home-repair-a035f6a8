@@ -68,11 +68,9 @@ export default function MasterDashboard() {
       let userLng = 0;
 
       try {
-        const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
-        );
-        userLat = pos.coords.latitude;
-        userLng = pos.coords.longitude;
+        const { lat, lng } = await getCurrentPosition();
+        userLat = lat;
+        userLng = lng;
       } catch {
         useGeo = false;
         setGeoUnavailable(true);
