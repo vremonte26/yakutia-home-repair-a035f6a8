@@ -95,7 +95,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} duration={5000} />}
+      {showSplash && <SplashScreen onFinish={() => setShowSplash(false)} duration={7000} />}
       <BrowserRouter>
         <AuthProvider>
           <TooltipProvider>
