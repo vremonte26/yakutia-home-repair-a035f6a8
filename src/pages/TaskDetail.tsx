@@ -269,9 +269,11 @@ export default function TaskDetail() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-1">
-        <ArrowLeft className="h-4 w-4" /> Назад
-      </Button>
+      <div className="sticky top-14 z-30 -mx-4 px-4 py-2 bg-background/90 backdrop-blur-md border-b shadow-sm">
+        <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-1">
+          <ArrowLeft className="h-4 w-4" /> Назад
+        </Button>
+      </div>
 
       <Card>
         <CardHeader className="pb-2">

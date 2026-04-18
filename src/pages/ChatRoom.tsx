@@ -324,7 +324,7 @@ export default function ChatRoom() {
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] -my-4">
       {/* Header */}
-      <div className="flex items-center gap-3 px-2 py-3 border-b bg-background shrink-0">
+      <div className="flex items-center gap-3 px-2 py-3 border-b bg-background/95 backdrop-blur-md shadow-sm shrink-0 sticky top-0 z-20">
         <Button variant="ghost" size="icon" onClick={() => navigate('/chats')} className="shrink-0">
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -399,7 +399,7 @@ export default function ChatRoom() {
 
       {/* Input or readonly banner */}
       {chatState === 'active' ? (
-        <form onSubmit={handleSubmit} className="flex items-center gap-2 px-3 py-2 border-t bg-background shrink-0">
+        <form onSubmit={handleSubmit} className="flex items-center gap-2 px-3 py-2 border-t bg-background/95 backdrop-blur-md shadow-[0_-2px_8px_rgba(0,0,0,0.04)] shrink-0 sticky bottom-0 z-20">
           <input
             ref={fileInputRef}
             type="file"
@@ -436,7 +436,7 @@ export default function ChatRoom() {
           </Button>
         </form>
       ) : (
-        <div className="px-3 py-3 border-t bg-muted/50 text-center shrink-0">
+        <div className="px-3 py-3 border-t bg-muted/50 backdrop-blur-md text-center shrink-0 sticky bottom-0 z-20 shadow-[0_-2px_8px_rgba(0,0,0,0.04)]">
           <p className="text-xs text-muted-foreground">
             {chatState === 'readonly' ? 'Заказ завершён. Чат доступен только для чтения.' : 'Чат недоступен'}
           </p>
