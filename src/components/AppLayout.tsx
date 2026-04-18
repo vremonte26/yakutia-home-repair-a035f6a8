@@ -66,7 +66,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="sticky top-0 z-50 bg-secondary text-secondary-foreground border-b border-secondary shadow-sm px-4 py-3">
+      <header ref={headerRef} className="sticky top-0 z-50 bg-secondary text-secondary-foreground border-b border-secondary shadow-sm px-4 py-3">
         <div className="container flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-secondary-foreground">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
