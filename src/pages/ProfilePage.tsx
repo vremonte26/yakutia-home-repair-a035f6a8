@@ -317,12 +317,23 @@ export default function ProfilePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base font-bold">
-            {isMaster ? 'Отзывы о вас от клиентов' : 'Отзывы о вас от мастеров'}
+          <CardTitle className="text-base font-bold flex items-center gap-2">
+            <span>{isMaster ? 'Отзывы о вас от клиентов' : 'Отзывы о вас от мастеров'}</span>
+            {unreadReviews > 0 && (
+              <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[11px] font-bold">
+                {unreadReviews > 99 ? '99+' : unreadReviews}
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <ReviewThread profileUserId={user!.id} emptyText="Нет отзывов" />
+        <CardContent onClick={markReviewsSeen}>
+          <ReviewThread
+            profileUserId={user!.id}
+            emptyText="Нет отзывов"
+            collapsible
+            initialCount={3}
+            onExpand={markReviewsSeen}
+          />
         </CardContent>
       </Card>
 
