@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_logs: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          details: Json | null
+          id: string
+          target_id: string | null
+          target_type: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_id?: string | null
+          target_type: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_id?: string | null
+          target_type?: string
+        }
+        Relationships: []
+      }
       complaints: {
         Row: {
           created_at: string
@@ -183,6 +213,7 @@ export type Database = {
           phone: string | null
           photo: string | null
           rating: number | null
+          rejection_reason: string | null
           role: Database["public"]["Enums"]["app_role"]
           updated_at: string
           work_area: string | null
@@ -199,6 +230,7 @@ export type Database = {
           phone?: string | null
           photo?: string | null
           rating?: number | null
+          rejection_reason?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
           work_area?: string | null
@@ -215,6 +247,7 @@ export type Database = {
           phone?: string | null
           photo?: string | null
           rating?: number | null
+          rejection_reason?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           updated_at?: string
           work_area?: string | null
@@ -399,14 +432,44 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["admin_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["admin_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["admin_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["admin_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin_or_moderator: { Args: { _user_id: string }; Returns: boolean }
       is_moderator: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
+      admin_role: "admin" | "moderator"
       app_role: "client" | "master" | "moderator"
       response_status: "pending" | "accepted" | "rejected"
       task_status: "open" | "in_progress" | "completed" | "cancelled"
@@ -537,6 +600,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      admin_role: ["admin", "moderator"],
       app_role: ["client", "master", "moderator"],
       response_status: ["pending", "accepted", "rejected"],
       task_status: ["open", "in_progress", "completed", "cancelled"],
