@@ -14,15 +14,15 @@ const RESEND_SECONDS = 60;
 export default function AuthPage() {
   const [otpOpen, setOtpOpen] = useState(false);
   const [phone, setPhone] = useState('');
-  const [otpValue, setOtpValue] = useState('');
+  const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [loading, setLoading] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
   const [errorMsg, setErrorMsg] = useState('');
-  const otpInputRef = useRef<HTMLInputElement>(null);
+  const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
+  const submittingRef = useRef(false);
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
 
-  // Countdown timer for resend
   useEffect(() => {
     if (!otpOpen) return;
     if (secondsLeft <= 0) return;
@@ -30,15 +30,20 @@ export default function AuthPage() {
     return () => clearInterval(t);
   }, [otpOpen, secondsLeft]);
 
-  // Autofocus OTP input when modal opens (mobile keyboard)
+  const focusIndex = (i: number) => {
+    setTimeout(() => inputsRef.current[i]?.focus(), 0);
+  };
+
   useEffect(() => {
     if (!otpOpen) return;
-    const id = setTimeout(() => {
-      const input = document.querySelector<HTMLInputElement>('[data-input-otp="true"]');
-      input?.focus();
-    }, 250);
+    const id = setTimeout(() => inputsRef.current[0]?.focus(), 250);
     return () => clearTimeout(id);
   }, [otpOpen]);
+
+  const resetOtp = (focusFirst = true) => {
+    setDigits(Array(OTP_LENGTH).fill(''));
+    if (focusFirst) focusIndex(0);
+  };
 
   const sendOtp = async () => {
     setLoading(true);
@@ -51,7 +56,8 @@ export default function AuthPage() {
     e.preventDefault();
     if (!phone.trim()) return;
     await sendOtp();
-    setOtpValue('');
+    resetOtp(false);
+    setErrorMsg('');
     setOtpOpen(true);
     toast({ title: 'Код отправлен', description: `Тестовый код: ${TEST_OTP_CODE}` });
   };
@@ -59,17 +65,18 @@ export default function AuthPage() {
   const handleResend = async () => {
     if (secondsLeft > 0) return;
     await sendOtp();
+    resetOtp();
+    setErrorMsg('');
     toast({ title: 'Код отправлен повторно', description: `Тестовый код: ${TEST_OTP_CODE}` });
   };
 
-  const handleVerifyOtp = async () => {
-    if (otpValue !== TEST_OTP_CODE) {
-      setOtpValue('');
+  const submitCode = async (code: string) => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    if (code !== TEST_OTP_CODE) {
       setErrorMsg('Неверный код. Попробуйте ещё раз');
-      setTimeout(() => {
-        const input = document.querySelector<HTMLInputElement>('[data-input-otp="true"]');
-        input?.focus();
-      }, 50);
+      resetOtp();
+      submittingRef.current = false;
       return;
     }
     setErrorMsg('');
@@ -85,8 +92,70 @@ export default function AuthPage() {
       setOtpOpen(false);
     } catch (err: any) {
       toast({ title: 'Ошибка', description: err.message, variant: 'destructive' });
+      resetOtp();
     } finally {
       setLoading(false);
+      submittingRef.current = false;
+    }
+  };
+
+  const handleDigitChange = (index: number, raw: string) => {
+    if (errorMsg) setErrorMsg('');
+    const cleaned = raw.replace(/\D/g, '');
+    if (!cleaned) {
+      // cleared via typing
+      const next = [...digits];
+      next[index] = '';
+      setDigits(next);
+      return;
+    }
+
+    // Handle paste / multi-char
+    if (cleaned.length > 1) {
+      const chars = cleaned.slice(0, OTP_LENGTH - index).split('');
+      const next = [...digits];
+      chars.forEach((c, i) => { next[index + i] = c; });
+      setDigits(next);
+      const lastFilled = Math.min(index + chars.length, OTP_LENGTH) - 1;
+      const nextEmpty = next.findIndex(d => d === '');
+      if (next.every(d => d !== '')) {
+        focusIndex(OTP_LENGTH - 1);
+        submitCode(next.join(''));
+      } else {
+        focusIndex(nextEmpty === -1 ? lastFilled : nextEmpty);
+      }
+      return;
+    }
+
+    const next = [...digits];
+    next[index] = cleaned;
+    setDigits(next);
+    if (index < OTP_LENGTH - 1) focusIndex(index + 1);
+    if (next.every(d => d !== '')) {
+      submitCode(next.join(''));
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace') {
+      if (digits[index]) {
+        const next = [...digits];
+        next[index] = '';
+        setDigits(next);
+        if (errorMsg) setErrorMsg('');
+        e.preventDefault();
+      } else if (index > 0) {
+        const next = [...digits];
+        next[index - 1] = '';
+        setDigits(next);
+        focusIndex(index - 1);
+        if (errorMsg) setErrorMsg('');
+        e.preventDefault();
+      }
+    } else if (e.key === 'ArrowLeft' && index > 0) {
+      focusIndex(index - 1);
+    } else if (e.key === 'ArrowRight' && index < OTP_LENGTH - 1) {
+      focusIndex(index + 1);
     }
   };
 
@@ -116,14 +185,13 @@ export default function AuthPage() {
               {loading ? 'Отправка...' : 'Получить код'}
             </Button>
             <p className="text-xs text-center text-muted-foreground">
-              Тестовый режим: код всегда <span className="font-mono font-bold">123456</span>
+              Тестовый режим: код всегда <span className="font-mono font-bold">{TEST_OTP_CODE}</span>
             </p>
           </form>
         </CardContent>
       </Card>
 
-      {/* OTP Modal */}
-      <Dialog open={otpOpen} onOpenChange={() => { /* locked: cannot dismiss by outside click */ }}>
+      <Dialog open={otpOpen} onOpenChange={() => { /* locked */ }}>
         <DialogContent
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
@@ -140,43 +208,40 @@ export default function AuthPage() {
           </DialogHeader>
 
           <div className="flex flex-col items-center py-2 gap-3">
-            <InputOTP
-              ref={otpInputRef}
-              maxLength={6}
-              value={otpValue}
-              onChange={(v) => { setOtpValue(v); if (errorMsg) setErrorMsg(''); }}
-              autoFocus
-              data-input-otp="true"
-            >
-              <InputOTPGroup className="gap-2">
-                {[0, 1, 2, 3, 4, 5].map(i => {
-                  const filled = otpValue.length > i;
-                  return (
-                    <InputOTPSlot
-                      key={i}
-                      index={i}
-                      className={`h-14 w-11 sm:w-12 text-2xl font-bold border-2 rounded-lg first:rounded-l-lg last:rounded-r-lg transition-colors ${
-                        filled
-                          ? 'bg-[#FFC107] border-[#FFC107] text-[#4A4A4A]'
-                          : 'bg-transparent border-[#D1D5DB] text-[#4A4A4A]'
-                      }`}
-                    />
-                  );
-                })}
-              </InputOTPGroup>
-            </InputOTP>
+            <div className="flex items-center justify-center gap-3">
+              {Array.from({ length: OTP_LENGTH }).map((_, i) => {
+                const filled = digits[i] !== '';
+                return (
+                  <input
+                    key={i}
+                    ref={el => (inputsRef.current[i] = el)}
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9]*"
+                    maxLength={1}
+                    value={digits[i]}
+                    disabled={loading}
+                    onChange={(e) => handleDigitChange(i, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(i, e)}
+                    onFocus={(e) => e.currentTarget.select()}
+                    className={`h-14 w-14 text-center text-2xl font-bold rounded-lg border-2 outline-none transition-colors ${
+                      filled
+                        ? 'bg-[#FFC107] border-[#FFC107] text-[#333333]'
+                        : 'bg-white border-[#D1D5DB] text-[#333333]'
+                    } focus:border-[#FFC107]`}
+                    style={{ caretColor: '#333333' }}
+                  />
+                );
+              })}
+            </div>
             {errorMsg && (
               <p className="text-sm text-neutral-600">{errorMsg}</p>
             )}
+            {loading && (
+              <p className="text-sm text-neutral-500">Проверка...</p>
+            )}
           </div>
-
-          <Button
-            className="w-full h-12 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground"
-            disabled={loading || otpValue.length < 6}
-            onClick={handleVerifyOtp}
-          >
-            {loading ? 'Проверка...' : 'Подтвердить'}
-          </Button>
 
           <div className="text-center text-sm">
             {secondsLeft > 0 ? (
