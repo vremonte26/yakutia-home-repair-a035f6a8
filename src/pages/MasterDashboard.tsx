@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CATEGORIES } from '@/lib/constants';
 import { LocateFixed } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getCurrentPosition } from '@/lib/geolocation';
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371;
