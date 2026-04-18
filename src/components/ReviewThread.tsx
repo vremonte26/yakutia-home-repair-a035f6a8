@@ -39,9 +39,22 @@ interface ReviewThreadProps {
   /** Triggers a refetch externally */
   refreshKey?: number;
   emptyText?: string;
+  /** If true, collapse root reviews after `initialCount` and show "Show more" button */
+  collapsible?: boolean;
+  /** How many root reviews to show initially when collapsible (default 3) */
+  initialCount?: number;
+  /** Called once when the user expands the collapsed list (used to reset unread badge) */
+  onExpand?: () => void;
 }
 
-export function ReviewThread({ profileUserId, refreshKey = 0, emptyText = 'Нет отзывов' }: ReviewThreadProps) {
+export function ReviewThread({
+  profileUserId,
+  refreshKey = 0,
+  emptyText = 'Нет отзывов',
+  collapsible = false,
+  initialCount = 3,
+  onExpand,
+}: ReviewThreadProps) {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const isModerator = (profile?.role as string) === 'moderator';
