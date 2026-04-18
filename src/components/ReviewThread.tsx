@@ -64,6 +64,12 @@ export function ReviewThread({
   const [loading, setLoading] = useState(true);
   const [internalKey, setInternalKey] = useState(0);
   const [expandedThreads, setExpandedThreads] = useState<Set<string>>(new Set());
+  const [rootsExpanded, setRootsExpanded] = useState(false);
+
+  const handleExpandRoots = () => {
+    setRootsExpanded(true);
+    onExpand?.();
+  };
 
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
