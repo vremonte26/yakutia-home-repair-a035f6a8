@@ -9,9 +9,8 @@ import { CategoryBadge, deduplicateCategories } from '@/components/CategoryBadge
 import { UserRating } from '@/components/UserRating';
 import ClickableAvatar from '@/components/ClickableAvatar';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { ArrowLeft, Phone, Star, CheckCircle } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { ru } from 'date-fns/locale';
+import { ReviewThread } from '@/components/ReviewThread';
+import { ArrowLeft, Phone, CheckCircle } from 'lucide-react';
 
 interface MasterReview {
   id: string;
@@ -191,31 +190,7 @@ export default function MasterProfile() {
           <CardTitle className="text-base font-bold">Отзывы клиентов</CardTitle>
         </CardHeader>
         <CardContent>
-          {reviews.length === 0 ? (
-            <p className="text-sm text-muted-foreground">У этого мастера пока нет отзывов</p>
-          ) : (
-            <div className="space-y-3">
-              {reviews.map(rev => (
-                <div key={rev.id} className="rounded-md border bg-card/50 p-3 space-y-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-3.5 w-3.5 ${i < rev.rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/30'}`}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(rev.created_at), { addSuffix: true, locale: ru })}
-                    </span>
-                  </div>
-                  {rev.comment && <p className="text-sm">{rev.comment}</p>}
-                  <p className="text-xs text-muted-foreground">— {rev.reviewer_name}</p>
-                </div>
-              ))}
-            </div>
-          )}
+          <ReviewThread profileUserId={masterId!} emptyText="У этого мастера пока нет отзывов" />
         </CardContent>
       </Card>
 
