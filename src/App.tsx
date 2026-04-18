@@ -14,6 +14,7 @@ import MyResponses from "./pages/MyResponses";
 import ChatList from "./pages/ChatList";
 import ChatRoom from "./pages/ChatRoom";
 import ProfilePage from "./pages/ProfilePage";
+import MyReviews from "./pages/MyReviews";
 import { AppLayout } from "./components/AppLayout";
 import TaskDetail from "./pages/TaskDetail";
 import MasterProfile from "./pages/MasterProfile";
@@ -81,6 +82,7 @@ function AppRoutes() {
       <Route path="/chats" element={<AppLayout><ChatList /></AppLayout>} />
       <Route path="/chat/:taskId" element={<AppLayout><ChatRoom /></AppLayout>} />
       <Route path="/profile" element={<AppLayout><ProfilePage /></AppLayout>} />
+      <Route path="/my-reviews" element={<AppLayout><MyReviews /></AppLayout>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
