@@ -343,6 +343,9 @@ export type Database = {
           id: string
           lat: number | null
           lng: number | null
+          phone: string | null
+          photos: string[] | null
+          price: number | null
           status: Database["public"]["Enums"]["task_status"]
           title: string
           updated_at: string
@@ -359,6 +362,9 @@ export type Database = {
           id?: string
           lat?: number | null
           lng?: number | null
+          phone?: string | null
+          photos?: string[] | null
+          price?: number | null
           status?: Database["public"]["Enums"]["task_status"]
           title: string
           updated_at?: string
@@ -375,6 +381,9 @@ export type Database = {
           id?: string
           lat?: number | null
           lng?: number | null
+          phone?: string | null
+          photos?: string[] | null
+          price?: number | null
           status?: Database["public"]["Enums"]["task_status"]
           title?: string
           updated_at?: string
