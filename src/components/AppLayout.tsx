@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, PlusCircle, User, Wrench, ClipboardList, Map, MessageCircle, MapPin } from 'lucide-react';
@@ -14,6 +14,19 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const [switching, setSwitching] = useState(false);
   const locationLabel = useUserLocation();
+  const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!headerRef.current) return;
+    const update = () => {
+      const h = headerRef.current?.offsetHeight ?? 0;
+      document.documentElement.style.setProperty('--app-header-h', `${h}px`);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(headerRef.current);
+    return () => ro.disconnect();
+  }, [locationLabel, profile]);
 
   const isMaster = profile?.role === 'master';
 
@@ -53,7 +66,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <header className="sticky top-0 z-50 bg-secondary text-secondary-foreground border-b border-secondary shadow-sm px-4 py-3">
+      <header ref={headerRef} className="sticky top-0 z-50 bg-secondary text-secondary-foreground border-b border-secondary shadow-sm px-4 py-3">
         <div className="container flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-secondary-foreground">
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
@@ -88,7 +101,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-lg border-t">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-lg border-t shadow-[0_-2px_8px_rgba(0,0,0,0.04)]" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <div className="container flex justify-around py-2">
           {navItems.map(item => {
             const active = location.pathname === item.to;
