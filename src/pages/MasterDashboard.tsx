@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CATEGORIES } from '@/lib/constants';
 import { LocateFixed } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { getCurrentPosition } from '@/lib/geolocation';
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const R = 6371;
@@ -68,11 +69,9 @@ export default function MasterDashboard() {
       let userLng = 0;
 
       try {
-        const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
-        );
-        userLat = pos.coords.latitude;
-        userLng = pos.coords.longitude;
+        const { lat, lng } = await getCurrentPosition();
+        userLat = lat;
+        userLng = lng;
       } catch {
         useGeo = false;
         setGeoUnavailable(true);
@@ -222,10 +221,7 @@ export default function MasterDashboard() {
     }
     setGeoLoading(true);
     try {
-      const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
-      );
-      const { latitude, longitude } = pos.coords;
+      const { lat: latitude, lng: longitude } = await getCurrentPosition({ forcePrompt: true });
       console.log('[GeoRefresh] Координаты мастера:', { latitude, longitude });
 
       let query = supabase

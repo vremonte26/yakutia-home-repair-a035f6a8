@@ -5,6 +5,11 @@ import { Button } from '@/components/ui/button';
 import { MapPin, Navigation, Locate } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Map, Marker } from '@2gis/mapgl/types';
+import {
+  getCurrentPosition,
+  getStoredPermission,
+  setStoredPermission,
+} from '@/lib/geolocation';
 
 const DGIS_API_KEY = 'f36bed16-b4cb-48a6-8b12-541f54023ec7';
 
@@ -38,16 +43,11 @@ function obfuscateCoords(lat: number, lng: number): [number, number] {
 
 type GeoState = 'asking' | 'denied' | 'granted' | 'error';
 
-const GEO_PERMISSION_KEY = 'geo_permission';
-
-function getSavedGeoPermission(): GeoState {
-  const saved = localStorage.getItem(GEO_PERMISSION_KEY);
-  if (saved === 'granted' || saved === 'denied') return saved;
+function initialGeoState(): GeoState {
+  const p = getStoredPermission();
+  if (p === 'granted') return 'granted';
+  if (p === 'denied') return 'denied';
   return 'asking';
-}
-
-function saveGeoPermission(state: 'granted' | 'denied') {
-  localStorage.setItem(GEO_PERMISSION_KEY, state);
 }
 
 function loadMapglScript(): Promise<void> {
@@ -74,50 +74,36 @@ export function TaskMap({ mode }: TaskMapProps) {
   const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [geoState, setGeoState] = useState<GeoState>(getSavedGeoPermission);
+  const [geoState, setGeoState] = useState<GeoState>(initialGeoState);
   const [geoError, setGeoError] = useState<string | null>(null);
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null);
   const [showUserPin, setShowUserPin] = useState(false);
 
   const autoTriggeredRef = useRef(false);
 
-  const requestGeolocation = useCallback(() => {
+  const requestGeolocation = useCallback(async (forcePrompt = false) => {
     setLoading(true);
     setGeoError(null);
 
-    if (!navigator.geolocation) {
-      setGeoState('error');
-      setGeoError('Геолокация недоступна в вашем браузере или устройстве');
+    try {
+      const { lat, lng } = await getCurrentPosition({ forcePrompt });
+      setCenter({ lat, lng });
+      setShowUserPin(true);
+      setGeoState('granted');
       setLoading(false);
-      return;
+    } catch (err: any) {
+      setLoading(false);
+      const msg = err?.message;
+      if (msg === 'geo_denied') {
+        setGeoState('denied');
+      } else if (msg === 'geo_unsupported') {
+        setGeoState('error');
+        setGeoError('Геолокация недоступна в вашем браузере или устройстве');
+      } else {
+        setGeoState('error');
+        setGeoError('Не удалось определить местоположение.');
+      }
     }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setCenter({ lat: position.coords.latitude, lng: position.coords.longitude });
-        setShowUserPin(true);
-        setGeoState('granted');
-        saveGeoPermission('granted');
-        setLoading(false);
-      },
-      (err) => {
-        setLoading(false);
-        if (err.code === err.PERMISSION_DENIED) {
-          setGeoState('denied');
-          saveGeoPermission('denied');
-        } else if (err.code === err.POSITION_UNAVAILABLE) {
-          setGeoState('error');
-          setGeoError('Геолокация недоступна. Проверьте настройки устройства.');
-        } else if (err.code === err.TIMEOUT) {
-          setGeoState('error');
-          setGeoError('Не удалось определить местоположение — истекло время ожидания.');
-        } else {
-          setGeoState('error');
-          setGeoError('Не удалось определить местоположение.');
-        }
-      },
-      { enableHighAccuracy: false, timeout: 10000 }
-    );
   }, []);
 
   // Auto-request geolocation if previously granted
@@ -280,8 +266,8 @@ export function TaskMap({ mode }: TaskMapProps) {
           <p className="text-sm text-muted-foreground mt-1">Чтобы показать заказы и мастеров рядом с вами</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={() => { setGeoState('denied'); saveGeoPermission('denied'); }}>Запретить</Button>
-          <Button onClick={requestGeolocation}>Разрешить</Button>
+          <Button variant="outline" onClick={() => { setStoredPermission('denied'); setGeoState('denied'); }}>Запретить</Button>
+          <Button onClick={() => requestGeolocation()}>Разрешить</Button>
         </div>
       </div>
     );
@@ -295,7 +281,7 @@ export function TaskMap({ mode }: TaskMapProps) {
           Без геолокации карта не может показать заказы рядом. Разрешите доступ в настройках браузера или сбросьте разрешение в профиле.
         </p>
         {geoError && <p className="text-xs text-destructive">{geoError}</p>}
-        <Button variant="outline" size="sm" onClick={requestGeolocation}>
+        <Button variant="outline" size="sm" onClick={() => requestGeolocation(true)}>
           Попробовать снова
         </Button>
       </div>

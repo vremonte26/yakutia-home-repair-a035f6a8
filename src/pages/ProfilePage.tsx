@@ -12,6 +12,7 @@ import { ReviewThread } from '@/components/ReviewThread';
 import ClickableAvatar from '@/components/ClickableAvatar';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { resetGeoPermission } from '@/lib/geolocation';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -320,7 +321,7 @@ export default function ProfilePage() {
           variant="outline"
           className="w-full"
           onClick={() => {
-            localStorage.removeItem('geo_permission');
+            resetGeoPermission();
             toast({ title: 'Разрешение на геолокацию сброшено. При следующем открытии карты браузер запросит его снова.' });
           }}
         >
