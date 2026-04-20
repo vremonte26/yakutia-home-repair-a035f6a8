@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CATEGORIES } from '@/lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { compressImageSafe } from '@/lib/imageCompression';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Check, Loader2, X, ImagePlus } from 'lucide-react';
 
@@ -85,9 +86,16 @@ export default function CreateTask() {
     try {
       const uploaded: string[] = [];
       for (const file of Array.from(files)) {
-        const ext = file.name.split('.').pop();
+        let compressionFailed = false;
+        const toUpload = await compressImageSafe(file, undefined, () => {
+          compressionFailed = true;
+        });
+        if (compressionFailed) {
+          toast({ title: 'Не удалось сжать фото — загружаем оригинал' });
+        }
+        const ext = (toUpload instanceof File ? toUpload.name : file.name).split('.').pop();
         const path = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error } = await supabase.storage.from('task-photos').upload(path, file);
+        const { error } = await supabase.storage.from('task-photos').upload(path, toUpload, { contentType: toUpload.type });
         if (error) throw error;
         const { data } = supabase.storage.from('task-photos').getPublicUrl(path);
         uploaded.push(data.publicUrl);

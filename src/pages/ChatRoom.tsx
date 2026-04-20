@@ -8,6 +8,7 @@ import { ArrowLeft, Send, User, RefreshCw, Clock, Paperclip, Loader2 } from 'luc
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { compressImageSafe } from '@/lib/imageCompression';
 
 interface Message {
   id: string;
@@ -257,13 +258,20 @@ export default function ChatRoom() {
     }
 
     setUploading(true);
-    const ext = file.name.split('.').pop() || 'jpg';
+    let compressionFailed = false;
+    const toUpload = await compressImageSafe(file, undefined, () => {
+      compressionFailed = true;
+    });
+    if (compressionFailed) {
+      toast({ title: 'Не удалось сжать фото — отправляем оригинал' });
+    }
+    const ext = (toUpload instanceof File ? toUpload.name : file.name).split('.').pop() || 'jpg';
     const rand = Math.random().toString(36).substring(2, 8);
     const filePath = `${taskId}/${user.id}_${Date.now()}_${rand}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from('chat-images')
-      .upload(filePath, file);
+      .upload(filePath, toUpload, { contentType: toUpload.type });
 
     if (uploadError) {
       toast({ title: 'Ошибка загрузки фото', description: uploadError.message, variant: 'destructive' });

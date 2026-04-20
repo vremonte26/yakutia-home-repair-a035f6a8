@@ -12,6 +12,7 @@ import ClickableAvatar from '@/components/ClickableAvatar';
 import { AdminPanelButton } from '@/components/AdminPanelButton';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { compressImageSafe } from '@/lib/imageCompression';
 import { resetGeoPermission } from '@/lib/geolocation';
 import {
   AlertDialog,
@@ -128,12 +129,19 @@ export default function ProfilePage() {
 
     setUploadingPhoto(true);
     try {
-      const ext = file.name.split('.').pop();
+      let compressionFailed = false;
+      const toUpload = await compressImageSafe(file, undefined, () => {
+        compressionFailed = true;
+      });
+      if (compressionFailed) {
+        toast({ title: 'Не удалось сжать фото — загружаем оригинал' });
+      }
+      const ext = (toUpload instanceof File ? toUpload.name : file.name).split('.').pop();
       const filePath = `${user.id}/avatar.${ext}`;
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, file, { upsert: true });
+        .upload(filePath, toUpload, { upsert: true, contentType: toUpload.type });
 
       if (uploadError) throw uploadError;
 
