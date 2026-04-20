@@ -10,6 +10,7 @@ import { CATEGORIES } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Camera, X } from 'lucide-react';
+import { compressImageSafe } from '@/lib/imageCompression';
 
 export default function MasterSetup() {
   const { user, profile, refreshProfile } = useAuth();
@@ -89,12 +90,19 @@ export default function MasterSetup() {
     setLoading(true);
 
     try {
-      // Upload photo
-      const ext = photoFile.name.split('.').pop();
+      // Compress + upload photo
+      let compressionFailed = false;
+      const toUpload = await compressImageSafe(photoFile, undefined, () => {
+        compressionFailed = true;
+      });
+      if (compressionFailed) {
+        toast({ title: 'Не удалось сжать фото — загружаем оригинал' });
+      }
+      const ext = (toUpload instanceof File ? toUpload.name : photoFile.name).split('.').pop();
       const filePath = `${user.id}/avatar.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, photoFile, { upsert: true });
+        .upload(filePath, toUpload, { upsert: true, contentType: toUpload.type });
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage
