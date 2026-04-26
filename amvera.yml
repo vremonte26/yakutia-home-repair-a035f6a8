@@ -1,0 +1,10 @@
+meta:
+  environment: node
+  build:
+    commands:
+      - npm install
+      - npm run build
+    dir: /
+  run:
+    command: npx serve -s dist -l 8080
+    dir: /
