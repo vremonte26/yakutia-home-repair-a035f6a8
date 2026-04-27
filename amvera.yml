@@ -1,5 +1,5 @@
 meta:
-  environment: node
+  toolchain: node
 build:
   commands:
     - npm install
