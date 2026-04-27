@@ -1,5 +1,6 @@
 meta:
-  toolchain: node
+  toolchain:
+    name: node
 build:
   commands:
     - npm install
