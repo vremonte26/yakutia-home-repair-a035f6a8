@@ -6,5 +6,5 @@ meta:
       - npm run build
     dir: /
   run:
-    command: npx serve -s dist -l 8080
+    command: npm run start
     dir: /
