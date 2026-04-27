@@ -1,11 +1,11 @@
 meta:
+  environment: node
   toolchain:
     name: node
+    version: 18
 build:
   commands:
     - npm install
     - npm run build
-  dir: /
 run:
   command: npx serve -s dist -l 8080
-  dir: /
