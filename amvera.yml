@@ -1,7 +1,6 @@
 meta:
   toolchain:
     name: node
-    version: 18
 build:
   commands:
     - npm install
