@@ -1,8 +1,11 @@
 meta:
   environment: node
+  toolchain:
+    name: node
 build:
   commands:
     - npm install
     - npm run build
 run:
   command: npx serve -s dist -l 8080
+  containerPort: 8080
