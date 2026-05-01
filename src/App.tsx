@@ -22,6 +22,7 @@ import ClientProfile from "./pages/ClientProfile";
 import Moderation from "./pages/Moderation";
 import AdminPanel from "./pages/AdminPanel";
 import MapPage from "./pages/MapPage";
+import ContractPage from "./pages/ContractPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -81,6 +82,7 @@ function AppRoutes() {
       <Route path="/admin" element={<AppLayout><AdminPanel /></AppLayout>} />
       <Route path="/chats" element={<AppLayout><ChatList /></AppLayout>} />
       <Route path="/chat/:taskId" element={<AppLayout><ChatRoom /></AppLayout>} />
+      <Route path="/contract/:taskId" element={<AppLayout><ContractPage /></AppLayout>} />
       <Route path="/profile" element={<AppLayout><ProfilePage /></AppLayout>} />
       <Route path="/my-reviews" element={<AppLayout><MyReviews /></AppLayout>} />
       <Route path="*" element={<NotFound />} />
