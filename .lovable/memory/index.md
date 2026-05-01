@@ -31,5 +31,6 @@ Updated: now
 - [Supabase Environment](mem://tech/supabase-environment) — Project ID, JWT rules, and test authentication codes
 - [Yandex Geocoding](mem://tech/yandex-geocoding-logic) — Exact house matching within Yakutsk radius
 - [2GIS Map Integration](mem://tech/map-provider-2gis) — MapGL implementation, geo-permission caching, and marker offsets
+- [Contract Module v3](mem://features/contract-module) — Договор с версиями, diff и подтверждением обеих сторон. SMS-подпись пока заглушка
 - [Header Geo Label](mem://features/header-geo-label) — Header shows current Yakutsk/ulus from reverse geocoding, cached
 - [Image Compression](mem://tech/image-compression) — compressorjs util for all uploads (chat, avatars, task photos)
