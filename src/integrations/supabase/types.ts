@@ -115,6 +115,146 @@ export type Database = {
           },
         ]
       }
+      contract_versions: {
+        Row: {
+          address: string
+          contract_id: string
+          created_at: string
+          deadline: string | null
+          id: string
+          initiator: Database["public"]["Enums"]["contract_party"]
+          initiator_user_id: string
+          price: number | null
+          subject: string
+          version_number: number
+        }
+        Insert: {
+          address?: string
+          contract_id: string
+          created_at?: string
+          deadline?: string | null
+          id?: string
+          initiator: Database["public"]["Enums"]["contract_party"]
+          initiator_user_id: string
+          price?: number | null
+          subject?: string
+          version_number: number
+        }
+        Update: {
+          address?: string
+          contract_id?: string
+          created_at?: string
+          deadline?: string | null
+          id?: string
+          initiator?: Database["public"]["Enums"]["contract_party"]
+          initiator_user_id?: string
+          price?: number | null
+          subject?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_versions_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contracts: {
+        Row: {
+          address: string
+          client_approved_version: number | null
+          client_id: string
+          created_at: string
+          current_version: number
+          deadline: string | null
+          id: string
+          last_initiator: Database["public"]["Enums"]["contract_party"] | null
+          last_sent_at: string | null
+          master_approved_version: number | null
+          master_id: string
+          price: number | null
+          status: Database["public"]["Enums"]["contract_status"]
+          subject: string
+          task_id: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string
+          client_approved_version?: number | null
+          client_id: string
+          created_at?: string
+          current_version?: number
+          deadline?: string | null
+          id?: string
+          last_initiator?: Database["public"]["Enums"]["contract_party"] | null
+          last_sent_at?: string | null
+          master_approved_version?: number | null
+          master_id: string
+          price?: number | null
+          status?: Database["public"]["Enums"]["contract_status"]
+          subject?: string
+          task_id: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          client_approved_version?: number | null
+          client_id?: string
+          created_at?: string
+          current_version?: number
+          deadline?: string | null
+          id?: string
+          last_initiator?: Database["public"]["Enums"]["contract_party"] | null
+          last_sent_at?: string | null
+          master_approved_version?: number | null
+          master_id?: string
+          price?: number | null
+          status?: Database["public"]["Enums"]["contract_status"]
+          subject?: string
+          task_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      master_private_data: {
+        Row: {
+          created_at: string
+          inn: string | null
+          master_id: string
+          passport_issued_by: string | null
+          passport_issued_date: string | null
+          passport_number: string | null
+          passport_series: string | null
+          registration_address: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          inn?: string | null
+          master_id: string
+          passport_issued_by?: string | null
+          passport_issued_date?: string | null
+          passport_number?: string | null
+          passport_series?: string | null
+          registration_address?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          inn?: string | null
+          master_id?: string
+          passport_issued_by?: string | null
+          passport_issued_date?: string | null
+          passport_number?: string | null
+          passport_series?: string | null
+          registration_address?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           created_at: string
@@ -471,6 +611,13 @@ export type Database = {
     Enums: {
       admin_role: "admin" | "moderator"
       app_role: "client" | "master" | "moderator"
+      contract_party: "client" | "master"
+      contract_status:
+        | "draft"
+        | "pending_approval"
+        | "approved"
+        | "signed"
+        | "cancelled"
       response_status: "pending" | "accepted" | "rejected"
       task_status: "open" | "in_progress" | "completed" | "cancelled"
     }
@@ -602,6 +749,14 @@ export const Constants = {
     Enums: {
       admin_role: ["admin", "moderator"],
       app_role: ["client", "master", "moderator"],
+      contract_party: ["client", "master"],
+      contract_status: [
+        "draft",
+        "pending_approval",
+        "approved",
+        "signed",
+        "cancelled",
+      ],
       response_status: ["pending", "accepted", "rejected"],
       task_status: ["open", "in_progress", "completed", "cancelled"],
     },
