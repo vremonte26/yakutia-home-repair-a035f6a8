@@ -10,7 +10,7 @@ import { CategoryBadge } from '@/components/CategoryBadge';
 import { UserRating } from '@/components/UserRating';
 import { ReviewForm } from '@/components/ReviewForm';
 import { TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constants';
-import { MapPin, Clock, ArrowLeft, CheckCircle, XCircle, Check, MessageCircle, Star } from 'lucide-react';
+import { MapPin, Clock, ArrowLeft, CheckCircle, XCircle, Check, MessageCircle, Star, FileText } from 'lucide-react';
 import ClickableAvatar from '@/components/ClickableAvatar';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { formatDistanceToNow } from 'date-fns';
@@ -312,6 +312,17 @@ export default function TaskDetail() {
               onClick={() => navigate(`/chat/${task.id}`)}
             >
               <MessageCircle className="h-4 w-4" /> Перейти в чат
+            </Button>
+          )}
+
+          {/* Contract button — после выбора мастера */}
+          {(task.status === 'in_progress' || task.status === 'completed') && acceptedResponse && (isOwner || (isMaster && acceptedResponse.master_id === user?.id)) && (
+            <Button
+              variant="default"
+              className="w-full gap-1"
+              onClick={() => navigate(`/contract/${task.id}`)}
+            >
+              <FileText className="h-4 w-4" /> Заключить договор
             </Button>
           )}
 
