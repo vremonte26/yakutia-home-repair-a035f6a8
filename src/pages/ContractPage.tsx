@@ -253,14 +253,15 @@ export default function ContractPage() {
     }
 
     // Инициатор автоматически подтверждает свою версию
-    const updates: Partial<Contract> & Record<string, any> = {
-      status: 'pending_approval',
+    const updates = {
+      status: 'pending_approval' as ContractStatus,
       current_version: newVersion,
       last_initiator: myParty,
       last_sent_at: new Date().toISOString(),
+      ...(myParty === 'client'
+        ? { client_approved_version: newVersion }
+        : { master_approved_version: newVersion }),
     };
-    if (myParty === 'client') updates.client_approved_version = newVersion;
-    else updates.master_approved_version = newVersion;
 
     const { error: cErr } = await supabase.from('contracts').update(updates).eq('id', contract.id);
     if (cErr) {
@@ -275,14 +276,15 @@ export default function ContractPage() {
   const approveCurrent = async () => {
     if (!contract || !myParty) return;
     setSubmitting(true);
-    const updates: Record<string, any> = {};
     const v = contract.current_version;
-    if (myParty === 'client') updates.client_approved_version = v;
-    else updates.master_approved_version = v;
-
-    // Если обе стороны подтвердили — статус approved
     const otherVer = myParty === 'client' ? contract.master_approved_version : contract.client_approved_version;
-    if (otherVer === v) updates.status = 'approved';
+    const becomesApproved = otherVer === v;
+    const updates = {
+      ...(myParty === 'client'
+        ? { client_approved_version: v }
+        : { master_approved_version: v }),
+      ...(becomesApproved ? { status: 'approved' as ContractStatus } : {}),
+    };
 
     const { error } = await supabase.from('contracts').update(updates).eq('id', contract.id);
     setSubmitting(false);
@@ -290,7 +292,7 @@ export default function ContractPage() {
       toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
       return;
     }
-    toast({ title: updates.status === 'approved' ? 'Договор согласован обеими сторонами' : 'Версия подтверждена' });
+    toast({ title: becomesApproved ? 'Договор согласован обеими сторонами' : 'Версия подтверждена' });
     fetchAll();
   };
 
