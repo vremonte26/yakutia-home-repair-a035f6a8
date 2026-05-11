@@ -10,9 +10,10 @@ import { CategoryBadge } from '@/components/CategoryBadge';
 import { UserRating } from '@/components/UserRating';
 import { ReviewForm } from '@/components/ReviewForm';
 import { TASK_STATUS_LABELS, type TaskStatus } from '@/lib/constants';
-import { MapPin, Clock, ArrowLeft, CheckCircle, XCircle, Check, MessageCircle, Star, FileText } from 'lucide-react';
+import { MapPin, Clock, ArrowLeft, CheckCircle, XCircle, Check, MessageCircle, Star, FileText, Flag } from 'lucide-react';
 import ClickableAvatar from '@/components/ClickableAvatar';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { ComplaintDialog } from '@/components/ComplaintDialog';
 import { formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
@@ -58,6 +59,7 @@ export default function TaskDetail() {
   const [clientReviews, setClientReviews] = useState<ClientReview[]>([]);
   const [myResponseId, setMyResponseId] = useState<string | null>(null);
   const [respondLoading, setRespondLoading] = useState(false);
+  const [complaintOpen, setComplaintOpen] = useState(false);
 
   const isOwner = task?.client_id === user?.id;
   const isMaster = profile?.role === 'master';
@@ -326,6 +328,18 @@ export default function TaskDetail() {
             </Button>
           )}
 
+          {/* Complaint button — доступна обеим сторонам после выбора мастера */}
+          {acceptedResponse && (isOwner || (isMaster && acceptedResponse.master_id === user?.id)) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full gap-1 text-destructive hover:text-destructive"
+              onClick={() => setComplaintOpen(true)}
+            >
+              <Flag className="h-4 w-4" /> Пожаловаться
+            </Button>
+          )}
+
           {/* Complete button for client */}
           {isOwner && task.status === 'in_progress' && acceptedResponse && (
             <Button
@@ -338,6 +352,16 @@ export default function TaskDetail() {
           )}
         </CardContent>
       </Card>
+
+      {acceptedResponse && (
+        <ComplaintDialog
+          open={complaintOpen}
+          onOpenChange={setComplaintOpen}
+          taskId={task.id}
+          toUser={isOwner ? acceptedResponse.master_id : task.client_id}
+          toUserName={isOwner ? acceptedResponse.profiles?.name : clientProfile?.name}
+        />
+      )}
 
       {/* Master view: client info + reviews + respond button */}
       {isMaster && !isOwner && (

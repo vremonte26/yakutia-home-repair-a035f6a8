@@ -343,6 +343,7 @@ export type Database = {
       profiles: {
         Row: {
           about: string | null
+          blocked_until: string | null
           categories: string[] | null
           created_at: string
           id: string
@@ -362,6 +363,7 @@ export type Database = {
         }
         Insert: {
           about?: string | null
+          blocked_until?: string | null
           categories?: string[] | null
           created_at?: string
           id: string
@@ -381,6 +383,7 @@ export type Database = {
         }
         Update: {
           about?: string | null
+          blocked_until?: string | null
           categories?: string[] | null
           created_at?: string
           id?: string
