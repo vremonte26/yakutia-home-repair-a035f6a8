@@ -3,8 +3,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { TaskCard } from '@/components/TaskCard';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Users } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { NearbyMastersDialog } from '@/components/NearbyMastersDialog';
 
 export default function ClientDashboard() {
   const { user } = useAuth();
@@ -12,6 +13,7 @@ export default function ClientDashboard() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [responseCounts, setResponseCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [nearbyOpen, setNearbyOpen] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -58,12 +60,18 @@ export default function ClientDashboard() {
 
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-extrabold">Мои заказы</h1>
-        <Button asChild size="sm">
-          <Link to="/create-task">
-            <PlusCircle className="h-4 w-4 mr-1" />
-            Создать
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => setNearbyOpen(true)}>
+            <Users className="h-4 w-4 mr-1" />
+            Мастера рядом
+          </Button>
+          <Button asChild size="sm">
+            <Link to="/create-task">
+              <PlusCircle className="h-4 w-4 mr-1" />
+              Создать
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {tasks.length === 0 ? (
@@ -94,6 +102,8 @@ export default function ClientDashboard() {
           })}
         </div>
       )}
+
+      <NearbyMastersDialog open={nearbyOpen} onOpenChange={setNearbyOpen} />
     </div>
   );
 }

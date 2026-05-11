@@ -349,6 +349,8 @@ export type Database = {
           is_active: boolean
           is_photo_moderated: boolean
           is_verified: boolean | null
+          lat: number | null
+          lng: number | null
           name: string
           phone: string | null
           photo: string | null
@@ -366,6 +368,8 @@ export type Database = {
           is_active?: boolean
           is_photo_moderated?: boolean
           is_verified?: boolean | null
+          lat?: number | null
+          lng?: number | null
           name?: string
           phone?: string | null
           photo?: string | null
@@ -383,6 +387,8 @@ export type Database = {
           is_active?: boolean
           is_photo_moderated?: boolean
           is_verified?: boolean | null
+          lat?: number | null
+          lng?: number | null
           name?: string
           phone?: string | null
           photo?: string | null
