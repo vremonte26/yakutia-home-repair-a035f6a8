@@ -72,6 +72,12 @@ export default function MasterDashboard() {
         const { lat, lng } = await getCurrentPosition();
         userLat = lat;
         userLng = lng;
+        // Persist master's coordinates so clients can find them via "Nearby masters"
+        supabase
+          .from('profiles')
+          .update({ lat, lng })
+          .eq('id', user.id)
+          .then(() => {});
       } catch {
         useGeo = false;
         setGeoUnavailable(true);
