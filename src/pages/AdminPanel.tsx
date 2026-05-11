@@ -19,7 +19,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { logAdminAction } from '@/lib/adminLog';
-import { Shield, CheckCircle2, XCircle, EyeOff, FileText } from 'lucide-react';
+import { Shield, CheckCircle2, XCircle, EyeOff, FileText, MessageCircle, Ban, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 type PendingMaster = {
   id: string;
@@ -37,8 +38,12 @@ type Complaint = {
   status: string;
   created_at: string;
   from_user: string;
+  to_user: string;
+  task_id: string | null;
   review_id: string | null;
+  moderator_note: string | null;
   from_profile?: { name: string } | null;
+  to_profile?: { name: string } | null;
   review?: { id: string; comment: string | null; rating: number | null; to_user: string } | null;
 };
 
@@ -57,11 +62,13 @@ export default function AdminPanel() {
   const { user } = useAuth();
   const { hasAccess, loading: roleLoading } = useAdminRole();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [masters, setMasters] = useState<PendingMaster[]>([]);
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [logs, setLogs] = useState<AdminLog[]>([]);
   const [rejectReason, setRejectReason] = useState('');
+  const [complaintFilter, setComplaintFilter] = useState<'new' | 'in_progress' | 'resolved' | 'all'>('new');
 
   const loadMasters = async () => {
     const { data } = await supabase
@@ -74,14 +81,20 @@ export default function AdminPanel() {
   };
 
   const loadComplaints = async () => {
-    const { data } = await supabase
+    let q = supabase
       .from('complaints')
-      .select('id, reason, status, created_at, from_user, review_id')
-      .eq('status', 'new')
+      .select('id, reason, status, created_at, from_user, to_user, task_id, review_id, moderator_note')
       .order('created_at', { ascending: false });
+    if (complaintFilter !== 'all') {
+      const statusList =
+        complaintFilter === 'resolved'
+          ? ['resolved', 'accepted', 'dismissed']
+          : [complaintFilter];
+      q = q.in('status', statusList);
+    }
+    const { data } = await q;
     const rows = (data ?? []) as Complaint[];
-    // Hydrate related data
-    const userIds = Array.from(new Set(rows.map(r => r.from_user)));
+    const userIds = Array.from(new Set(rows.flatMap(r => [r.from_user, r.to_user]).filter(Boolean)));
     const reviewIds = rows.map(r => r.review_id).filter(Boolean) as string[];
     const [profilesRes, reviewsRes] = await Promise.all([
       userIds.length
@@ -97,6 +110,7 @@ export default function AdminPanel() {
       rows.map(r => ({
         ...r,
         from_profile: pMap.get(r.from_user) ?? null,
+        to_profile: pMap.get(r.to_user) ?? null,
         review: r.review_id ? rMap.get(r.review_id) ?? null : null,
       })),
     );
@@ -123,6 +137,11 @@ export default function AdminPanel() {
       loadLogs();
     }
   }, [hasAccess]);
+
+  useEffect(() => {
+    if (hasAccess) loadComplaints();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [complaintFilter]);
 
   if (roleLoading) {
     return (
@@ -190,7 +209,7 @@ export default function AdminPanel() {
   const dismissComplaint = async (c: Complaint) => {
     const { error } = await supabase
       .from('complaints')
-      .update({ status: 'dismissed', resolved_at: new Date().toISOString(), resolved_by: user!.id })
+      .update({ status: 'dismissed', moderator_note: 'Без последствий', resolved_at: new Date().toISOString(), resolved_by: user!.id })
       .eq('id', c.id);
     if (error) return toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
     await logAdminAction({
@@ -205,29 +224,79 @@ export default function AdminPanel() {
     loadLogs();
   };
 
-  const acceptComplaint = async (c: Complaint) => {
+  const acceptComplaint = async (c: Complaint, sanction: 'block' | 'warn') => {
+    // Optionally hide a related review
     if (c.review_id) {
-      const { error: rErr } = await supabase
+      await supabase
         .from('reviews')
         .update({ is_hidden: true, hidden_reason: c.reason })
         .eq('id', c.review_id);
-      if (rErr) return toast({ title: 'Ошибка', description: rErr.message, variant: 'destructive' });
     }
+
+    if (sanction === 'block') {
+      const blockedUntil = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { error: pErr } = await supabase
+        .from('profiles')
+        .update({ is_active: false, blocked_until: blockedUntil })
+        .eq('id', c.to_user);
+      if (pErr) return toast({ title: 'Ошибка блокировки', description: pErr.message, variant: 'destructive' });
+      await (supabase.from as any)('notifications').insert({
+        user_id: c.to_user,
+        type: 'moderation',
+        title: 'Аккаунт временно заблокирован',
+        body: `На вас поступила жалоба. Доступ ограничен до ${new Date(blockedUntil).toLocaleDateString('ru-RU')}. Причина: ${c.reason}`,
+      });
+    } else {
+      await (supabase.from as any)('notifications').insert({
+        user_id: c.to_user,
+        type: 'moderation',
+        title: 'Предупреждение от модератора',
+        body: `На вас поступила жалоба: ${c.reason}. Повторное нарушение приведёт к блокировке.`,
+      });
+    }
+
+    const note = sanction === 'block' ? 'Заблокирован на 7 дней' : 'Вынесено предупреждение';
     const { error } = await supabase
       .from('complaints')
-      .update({ status: 'accepted', resolved_at: new Date().toISOString(), resolved_by: user!.id })
+      .update({ status: 'accepted', moderator_note: note, resolved_at: new Date().toISOString(), resolved_by: user!.id })
+      .eq('id', c.id);
+    if (error) return toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
+
+    await logAdminAction({
+      actorId: user!.id,
+      action: sanction === 'block' ? 'block_user_7d' : 'warn_user',
+      targetType: 'profile',
+      targetId: c.to_user,
+      details: { complaint_id: c.id, reason: c.reason },
+    });
+    toast({ title: sanction === 'block' ? 'Пользователь заблокирован на 7 дней' : 'Предупреждение вынесено' });
+    loadComplaints();
+    loadLogs();
+  };
+
+  const takeComplaint = async (c: Complaint) => {
+    const { error } = await supabase
+      .from('complaints')
+      .update({ status: 'in_progress' })
       .eq('id', c.id);
     if (error) return toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
     await logAdminAction({
       actorId: user!.id,
-      action: 'accept_complaint',
+      action: 'take_complaint',
       targetType: 'complaint',
       targetId: c.id,
-      details: { review_id: c.review_id, reason: c.reason },
+      details: {},
     });
-    toast({ title: 'Жалоба принята, отзыв скрыт' });
     loadComplaints();
     loadLogs();
+  };
+
+  const contactUser = (c: Complaint) => {
+    if (!c.task_id) {
+      toast({ title: 'Чат недоступен — жалоба без заказа', variant: 'destructive' });
+      return;
+    }
+    navigate(`/chat/${c.task_id}`);
   };
 
   return (
@@ -325,8 +394,25 @@ export default function AdminPanel() {
 
         {/* Complaints */}
         <TabsContent value="complaints" className="space-y-3 mt-4">
+          <div className="flex flex-wrap gap-2">
+            {([
+              { v: 'new', label: 'Новые' },
+              { v: 'in_progress', label: 'В работе' },
+              { v: 'resolved', label: 'Решённые' },
+              { v: 'all', label: 'Все' },
+            ] as const).map(f => (
+              <Button
+                key={f.v}
+                size="sm"
+                variant={complaintFilter === f.v ? 'default' : 'outline'}
+                onClick={() => setComplaintFilter(f.v)}
+              >
+                {f.label}
+              </Button>
+            ))}
+          </div>
           {complaints.length === 0 && (
-            <p className="text-center text-muted-foreground py-8">Нет новых жалоб</p>
+            <p className="text-center text-muted-foreground py-8">Жалоб не найдено</p>
           )}
           {complaints.map(c => (
             <Card key={c.id}>
@@ -335,10 +421,14 @@ export default function AdminPanel() {
                   <div className="text-xs text-muted-foreground">
                     {new Date(c.created_at).toLocaleString('ru-RU')}
                   </div>
-                  <Badge variant="outline">Новая</Badge>
+                  <Badge variant={c.status === 'new' ? 'destructive' : c.status === 'in_progress' ? 'secondary' : 'outline'}>
+                    {c.status === 'new' ? 'Новая' : c.status === 'in_progress' ? 'В работе' : c.status === 'accepted' ? 'Принята' : c.status === 'dismissed' ? 'Отклонена' : 'Решена'}
+                  </Badge>
                 </div>
                 <div>
-                  <div className="text-xs text-muted-foreground">От: {c.from_profile?.name ?? '—'}</div>
+                  <div className="text-xs text-muted-foreground">
+                    От: {c.from_profile?.name ?? '—'} → На: {c.to_profile?.name ?? '—'}
+                  </div>
                   <div className="text-sm mt-1"><span className="font-medium">Причина: </span>{c.reason}</div>
                 </div>
                 {c.review && (
@@ -349,15 +439,36 @@ export default function AdminPanel() {
                     {c.review.comment ?? <em className="text-muted-foreground">без комментария</em>}
                   </div>
                 )}
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Button variant="outline" onClick={() => dismissComplaint(c)} className="flex-1">
-                    Отклонить жалобу
-                  </Button>
-                  <Button onClick={() => acceptComplaint(c)} className="flex-1">
-                    <EyeOff className="h-4 w-4 mr-2" />
-                    Принять (скрыть отзыв)
-                  </Button>
-                </div>
+                {c.moderator_note && (
+                  <p className="text-xs text-muted-foreground italic">Решение: {c.moderator_note}</p>
+                )}
+                {(c.status === 'new' || c.status === 'in_progress') && (
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap gap-2">
+                      {c.status === 'new' && (
+                        <Button size="sm" variant="secondary" onClick={() => takeComplaint(c)} className="gap-1">
+                          Взять в работу
+                        </Button>
+                      )}
+                      {c.task_id && (
+                        <Button size="sm" variant="outline" onClick={() => contactUser(c)} className="gap-1">
+                          <MessageCircle className="h-4 w-4" /> Связаться
+                        </Button>
+                      )}
+                      <Button size="sm" variant="ghost" onClick={() => dismissComplaint(c)} className="gap-1">
+                        <XCircle className="h-4 w-4" /> Отклонить
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-1 border-t">
+                      <Button size="sm" variant="outline" onClick={() => acceptComplaint(c, 'warn')} className="gap-1">
+                        <AlertTriangle className="h-4 w-4" /> Принять — предупреждение
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => acceptComplaint(c, 'block')} className="gap-1">
+                        <Ban className="h-4 w-4" /> Принять — блок 7 дней
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
