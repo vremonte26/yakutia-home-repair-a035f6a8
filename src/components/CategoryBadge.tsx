@@ -2,8 +2,10 @@ import { CATEGORIES } from '@/lib/constants';
 import { Badge } from '@/components/ui/badge';
 
 const LEGACY_MAP: Record<string, string> = {
-  tiling: 'finishing',
-  painting: 'finishing',
+  tiling: 'construction',
+  painting: 'construction',
+  finishing: 'construction',
+  minor_repair: 'construction',
 };
 
 interface CategoryBadgeProps {
@@ -24,7 +26,7 @@ export function CategoryBadge({ value, size = 'default' }: CategoryBadgeProps) {
   );
 }
 
-/** Deduplicate categories by resolved label (handles legacy tiling/painting → finishing) */
+/** Deduplicate categories by resolved label (maps legacy values to current ones) */
 export function deduplicateCategories(categories: string[]): string[] {
   const seen = new Set<string>();
   return categories.filter(val => {

@@ -1,9 +1,9 @@
 export const CATEGORIES = [
-  { value: 'plumbing', label: 'Сантехника', icon: '🔧' },
+  { value: 'construction', label: 'Строительство и ремонт', icon: '🏗️' },
   { value: 'electrical', label: 'Электрика', icon: '⚡' },
-  { value: 'furniture', label: 'Сборка мебели', icon: '🪑' },
-  { value: 'minor_repair', label: 'Мелкий ремонт', icon: '🔨' },
-  { value: 'finishing', label: 'Отделка', icon: '🎨' },
+  { value: 'plumbing', label: 'Сантехника', icon: '🔧' },
+  { value: 'furniture', label: 'Мебель', icon: '🪑' },
+  { value: 'care', label: 'Забота', icon: '💚' },
   { value: 'other', label: 'Другое', icon: '🛠️' },
 ] as const;
 
