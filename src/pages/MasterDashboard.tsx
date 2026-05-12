@@ -404,8 +404,14 @@ export default function MasterDashboard() {
           <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
         </div>
       ) : (() => {
-        const openTasks = tasks.filter(t => t.status === 'open');
-        const historyTasks = tasks.filter(t => t.status === 'completed' || t.status === 'cancelled');
+        const q = search.trim().toLowerCase();
+        const matchesSearch = (t: any) =>
+          !q ||
+          (t.title || '').toLowerCase().includes(q) ||
+          (t.description || '').toLowerCase().includes(q);
+        const filteredBySearch = tasks.filter(matchesSearch);
+        const openTasks = filteredBySearch.filter(t => t.status === 'open');
+        const historyTasks = filteredBySearch.filter(t => t.status === 'completed' || t.status === 'cancelled');
         const activeTasks = openTasks.filter(t => !viewedIds.has(t.id) && !respondedTaskIds.has(t.id));
         const dimmedOpenTasks = openTasks.filter(t => viewedIds.has(t.id) || respondedTaskIds.has(t.id));
 
