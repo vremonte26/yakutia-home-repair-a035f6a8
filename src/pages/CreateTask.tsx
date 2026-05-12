@@ -19,13 +19,13 @@ export default function CreateTask() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [category, setCategory] = useState('');
-  const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [recommendedPrice, setRecommendedPrice] = useState<number | null>(null);
 
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [geocoding, setGeocoding] = useState(false);
@@ -38,6 +38,30 @@ export default function CreateTask() {
       if (data?.phone) setPhone(data.phone);
     });
   }, [user]);
+
+  // Recommended price: average of tasks in this category in the last 7 days
+  useEffect(() => {
+    if (!category) {
+      setRecommendedPrice(null);
+      return;
+    }
+    const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    supabase
+      .from('tasks')
+      .select('price')
+      .eq('category', category)
+      .gte('created_at', since)
+      .not('price', 'is', null)
+      .then(({ data }) => {
+        const prices = (data ?? []).map((r: any) => Number(r.price)).filter(p => p > 0);
+        if (prices.length < 3) {
+          setRecommendedPrice(null);
+          return;
+        }
+        const avg = prices.reduce((a, b) => a + b, 0) / prices.length;
+        setRecommendedPrice(Math.round(avg / 50) * 50);
+      });
+  }, [category]);
 
   const geocodeAddress = async () => {
     if (!address.trim()) return;
@@ -122,6 +146,11 @@ export default function CreateTask() {
       return;
     }
 
+    if (!description.trim()) {
+      toast({ title: 'Опишите задачу', variant: 'destructive' });
+      return;
+    }
+
     if (!coords) {
       if (!address.trim()) {
         toast({ title: 'Введите адрес', variant: 'destructive' });
@@ -134,10 +163,13 @@ export default function CreateTask() {
       return;
     }
 
+    // Auto-generate title from description (first line / 60 chars)
+    const autoTitle = description.trim().split('\n')[0].slice(0, 60) || 'Заказ';
+
     setLoading(true);
     const { error } = await supabase.from('tasks').insert({
       client_id: user.id,
-      title,
+      title: autoTitle,
       description,
       category,
       address,
@@ -182,30 +214,23 @@ export default function CreateTask() {
               </Select>
             </div>
 
-            {/* 2. Заголовок */}
+            {/* 2. Описание */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Заголовок <span className="text-destructive">*</span></label>
-              <Input
-                placeholder="Напр: Заменить смеситель"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* 3. Описание */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Описание <span className="text-destructive">*</span></label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Описание <span className="text-destructive">*</span></label>
+                <span className="text-xs text-muted-foreground">{description.length}/500</span>
+              </div>
               <Textarea
-                placeholder="Опишите подробно, что нужно сделать..."
+                placeholder="Опишите, что нужно сделать..."
                 value={description}
-                onChange={e => setDescription(e.target.value)}
-                rows={3}
+                onChange={e => setDescription(e.target.value.slice(0, 500))}
+                maxLength={500}
+                rows={4}
                 required
               />
             </div>
 
-            {/* 4. Цена */}
+            {/* 3. Цена */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Стоимость, ₽</label>
               <Input
@@ -216,7 +241,16 @@ export default function CreateTask() {
                 onChange={e => setPrice(e.target.value)}
                 min="0"
               />
-              <p className="text-xs text-muted-foreground">Если не указано — цена договорная</p>
+              <p className="text-xs text-muted-foreground">Если не указано — мастер предложит свою цену в отклике</p>
+              {recommendedPrice && !price.trim() && (
+                <button
+                  type="button"
+                  onClick={() => setPrice(String(recommendedPrice))}
+                  className="text-xs text-primary font-medium hover:underline"
+                >
+                  💡 Рекомендуемая цена в категории: ~{recommendedPrice.toLocaleString('ru-RU')} ₽ (нажмите, чтобы подставить)
+                </button>
+              )}
             </div>
 
             {/* 5. Адрес */}
