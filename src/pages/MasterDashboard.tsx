@@ -4,9 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { TaskCard } from '@/components/TaskCard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { CATEGORIES } from '@/lib/constants';
-import { LocateFixed } from 'lucide-react';
+import { LocateFixed, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getCurrentPosition } from '@/lib/geolocation';
 
@@ -35,6 +36,7 @@ export default function MasterDashboard() {
   const [geoActive, setGeoActive] = useState(false);
   const [geoUnavailable, setGeoUnavailable] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
   const [viewedIds, setViewedIds] = useState<Set<string>>(() => {
     try {
@@ -378,6 +380,17 @@ export default function MasterDashboard() {
             {cat.icon} {cat.label}
           </Badge>
         ))}
+      </div>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Input
+          type="search"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Поиск по заголовку или описанию"
+          className="pl-9"
+        />
       </div>
 
       {geoUnavailable && (
