@@ -61,6 +61,14 @@ export function NotificationBell() {
             ))
           )}
         </ScrollArea>
+        <div className="border-t">
+          <button
+            onClick={() => { setOpen(false); navigate('/notifications'); }}
+            className="w-full text-center text-xs font-medium text-primary py-2.5 hover:bg-accent/50 transition-colors"
+          >
+            Все уведомления
+          </button>
+        </div>
       </PopoverContent>
     </Popover>
   );

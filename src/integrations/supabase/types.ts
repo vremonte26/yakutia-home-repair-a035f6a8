@@ -353,6 +353,7 @@ export type Database = {
           lat: number | null
           lng: number | null
           name: string
+          notification_prefs: Json
           phone: string | null
           photo: string | null
           rating: number | null
@@ -373,6 +374,7 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           name?: string
+          notification_prefs?: Json
           phone?: string | null
           photo?: string | null
           rating?: number | null
@@ -393,6 +395,7 @@ export type Database = {
           lat?: number | null
           lng?: number | null
           name?: string
+          notification_prefs?: Json
           phone?: string | null
           photo?: string | null
           rating?: number | null
@@ -616,6 +619,10 @@ export type Database = {
       }
       is_admin_or_moderator: { Args: { _user_id: string }; Returns: boolean }
       is_moderator: { Args: { _user_id: string }; Returns: boolean }
+      notif_pref_enabled: {
+        Args: { _key: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       admin_role: "admin" | "moderator"

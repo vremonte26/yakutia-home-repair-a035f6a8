@@ -10,6 +10,7 @@ import { UserRating } from '@/components/UserRating';
 import { LogOut, ArrowLeftRight, Phone, Clock, X, Trash2, Pencil, Camera, Check, LocateOff, Shield, Star, ChevronRight } from 'lucide-react';
 import ClickableAvatar from '@/components/ClickableAvatar';
 import { AdminPanelButton } from '@/components/AdminPanelButton';
+import { NotificationPreferences } from '@/components/NotificationPreferences';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { compressImageSafe } from '@/lib/imageCompression';
@@ -346,6 +347,11 @@ export default function ProfilePage() {
 
       <div className="space-y-2">
         <AdminPanelButton />
+      </div>
+
+      <NotificationPreferences />
+
+      <div className="space-y-2">
         <Button variant="outline" className="w-full" onClick={switchRole}>
           <ArrowLeftRight className="h-4 w-4 mr-2" />
           {isMaster ? 'Стать клиентом' : 'Стать мастером'}
