@@ -11,6 +11,7 @@ import MasterSetup from "./pages/MasterSetup";
 import ModerationPending from "./pages/ModerationPending";
 import CreateTask from "./pages/CreateTask";
 import MyResponses from "./pages/MyResponses";
+import MyOrders from "./pages/MyOrders";
 import ChatList from "./pages/ChatList";
 import ChatRoom from "./pages/ChatRoom";
 import ProfilePage from "./pages/ProfilePage";
@@ -75,6 +76,7 @@ function AppRoutes() {
       <Route path="/create-task" element={<AppLayout><CreateTask /></AppLayout>} />
       <Route path="/map" element={<MapPage />} />
       <Route path="/my-responses" element={<AppLayout><MyResponses /></AppLayout>} />
+      <Route path="/my-orders" element={<AppLayout><MyOrders /></AppLayout>} />
       <Route path="/task/:id" element={<AppLayout><TaskDetail /></AppLayout>} />
       <Route path="/master/:id" element={<AppLayout><MasterProfile /></AppLayout>} />
       <Route path="/client/:id" element={<AppLayout><ClientProfile /></AppLayout>} />
