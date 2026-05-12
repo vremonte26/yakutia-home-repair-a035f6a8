@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { TaskCard } from '@/components/TaskCard';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Users } from 'lucide-react';
+import { PlusCircle, Users, History } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { NearbyMastersDialog } from '@/components/NearbyMastersDialog';
 
@@ -61,6 +61,12 @@ export default function ClientDashboard() {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-extrabold">Мои заказы</h1>
         <div className="flex items-center gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link to="/my-orders">
+              <History className="h-4 w-4 mr-1" />
+              История
+            </Link>
+          </Button>
           <Button size="sm" variant="outline" onClick={() => setNearbyOpen(true)}>
             <Users className="h-4 w-4 mr-1" />
             Мастера рядом
