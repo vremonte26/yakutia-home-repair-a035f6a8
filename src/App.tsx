@@ -26,6 +26,8 @@ import AdminPanel from "./pages/AdminPanel";
 import MapPage from "./pages/MapPage";
 import ContractPage from "./pages/ContractPage";
 import NotFound from "./pages/NotFound";
+import TermsPage from "./pages/TermsPage";
+import PrivacyPage from "./pages/PrivacyPage";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +45,8 @@ function AppRoutes() {
   if (!user) {
     return (
       <Routes>
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="*" element={<AuthPage />} />
       </Routes>
     );
@@ -71,6 +75,9 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Index />} />
+      <Route path="/auth" element={<Navigate to="/" replace />} />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/role-selection" element={<RoleSelection />} />
       <Route path="/master-setup" element={<MasterSetup />} />
       <Route path="/moderation-pending" element={<ModerationPending />} />
