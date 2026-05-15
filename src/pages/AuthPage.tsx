@@ -1,38 +1,67 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Wrench } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Link } from 'react-router-dom';
 
 const OTP_LENGTH = 4;
 const TEST_OTP_CODE = '1234';
 const RESEND_SECONDS = 60;
 
+function formatPhone(raw: string) {
+  const d = raw.replace(/\D/g, '').replace(/^8/, '7').slice(0, 11);
+  if (!d) return '';
+  let out = '+7';
+  if (d.length > 1) out += ' (' + d.slice(1, 4);
+  if (d.length >= 4) out += ') ' + d.slice(4, 7);
+  if (d.length >= 7) out += '-' + d.slice(7, 9);
+  if (d.length >= 9) out += '-' + d.slice(9, 11);
+  return out;
+}
+function phoneDigits(raw: string) {
+  const d = raw.replace(/\D/g, '').replace(/^8/, '7');
+  return d.length === 11 ? '+' + d : '';
+}
+
 export default function AuthPage() {
+  const [tab, setTab] = useState<'login' | 'register'>('login');
+
+  // Login fields
+  const [loginPhone, setLoginPhone] = useState('');
+  const [loginEmail, setLoginEmail] = useState('');
+
+  // Register fields
+  const [regPhone, setRegPhone] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regName, setRegName] = useState('');
+  const [agreed, setAgreed] = useState(false);
+
+  // OTP modal state
   const [otpOpen, setOtpOpen] = useState(false);
-  const [phone, setPhone] = useState('');
+  const [otpMode, setOtpMode] = useState<'login' | 'register'>('login');
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(''));
-  const [loading, setLoading] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
   const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [otpTarget, setOtpTarget] = useState('');
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
   const submittingRef = useRef(false);
+
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!otpOpen) return;
-    if (secondsLeft <= 0) return;
+    if (!otpOpen || secondsLeft <= 0) return;
     const t = setInterval(() => setSecondsLeft(s => Math.max(0, s - 1)), 1000);
     return () => clearInterval(t);
   }, [otpOpen, secondsLeft]);
-
-  const focusIndex = (i: number) => {
-    setTimeout(() => inputsRef.current[i]?.focus(), 0);
-  };
 
   useEffect(() => {
     if (!otpOpen) return;
@@ -40,34 +69,54 @@ export default function AuthPage() {
     return () => clearTimeout(id);
   }, [otpOpen]);
 
+  const focusIndex = (i: number) => setTimeout(() => inputsRef.current[i]?.focus(), 0);
   const resetOtp = (focusFirst = true) => {
     setDigits(Array(OTP_LENGTH).fill(''));
     if (focusFirst) focusIndex(0);
   };
 
-  const sendOtp = async () => {
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 400));
-    setLoading(false);
-    setSecondsLeft(RESEND_SECONDS);
-  };
-
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!phone.trim()) return;
-    await sendOtp();
-    resetOtp(false);
+  const openOtp = (mode: 'login' | 'register', target: string) => {
+    setOtpMode(mode);
+    setOtpTarget(target);
+    setDigits(Array(OTP_LENGTH).fill(''));
     setErrorMsg('');
+    setSecondsLeft(RESEND_SECONDS);
     setOtpOpen(true);
     toast({ title: 'Код отправлен', description: `Тестовый код: ${TEST_OTP_CODE}` });
   };
 
-  const handleResend = async () => {
-    if (secondsLeft > 0) return;
-    await sendOtp();
-    resetOtp();
-    setErrorMsg('');
-    toast({ title: 'Код отправлен повторно', description: `Тестовый код: ${TEST_OTP_CODE}` });
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const phone = phoneDigits(loginPhone);
+    const email = loginEmail.trim();
+    if (!phone && !email) {
+      toast({ title: 'Укажите телефон или email', variant: 'destructive' });
+      return;
+    }
+    openOtp('login', email || phone);
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const phone = phoneDigits(regPhone);
+    const email = regEmail.trim().toLowerCase();
+    if (!phone) { toast({ title: 'Введите корректный телефон', variant: 'destructive' }); return; }
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) { toast({ title: 'Введите корректный email', variant: 'destructive' }); return; }
+    if (!agreed) return;
+
+    setLoading(true);
+    // uniqueness check
+    const { data: existing } = await supabase
+      .from('profiles')
+      .select('id, phone')
+      .eq('phone', phone)
+      .maybeSingle();
+    setLoading(false);
+    if (existing) {
+      toast({ title: 'Этот телефон уже зарегистрирован', description: 'Войдите в существующий аккаунт', variant: 'destructive' });
+      return;
+    }
+    openOtp('register', email);
   };
 
   const submitCode = async (code: string) => {
@@ -82,12 +131,26 @@ export default function AuthPage() {
     setErrorMsg('');
     setLoading(true);
     try {
-      const fakeEmail = `${phone.replace(/\D/g, '')}@vremonte.local`;
-      const password = `otp_${phone.replace(/\D/g, '')}_secure`;
-      try {
-        await signIn(fakeEmail, password);
-      } catch {
-        await signUp(fakeEmail, password, '', phone);
+      if (otpMode === 'login') {
+        const phone = phoneDigits(loginPhone);
+        const email = loginEmail.trim().toLowerCase();
+        const fakeEmail = email || `${phone.replace(/\D/g, '')}@vremonte.local`;
+        const password = `otp_${(phone || email).replace(/\D/g, '')}_secure`;
+        try {
+          await signIn(fakeEmail, password);
+        } catch {
+          await signUp(fakeEmail, password, '', phone);
+        }
+      } else {
+        const phone = phoneDigits(regPhone);
+        const email = regEmail.trim().toLowerCase();
+        const password = `otp_${phone.replace(/\D/g, '')}_secure`;
+        try {
+          await signUp(email, password, regName.trim(), phone);
+        } catch (err: any) {
+          // fallback to sign in if already registered in auth
+          await signIn(email, password);
+        }
       }
       setOtpOpen(false);
     } catch (err: any) {
@@ -103,61 +166,36 @@ export default function AuthPage() {
     if (errorMsg) setErrorMsg('');
     const cleaned = raw.replace(/\D/g, '');
     if (!cleaned) {
-      // cleared via typing
-      const next = [...digits];
-      next[index] = '';
-      setDigits(next);
-      return;
+      const next = [...digits]; next[index] = ''; setDigits(next); return;
     }
-
-    // Handle paste / multi-char
     if (cleaned.length > 1) {
       const chars = cleaned.slice(0, OTP_LENGTH - index).split('');
       const next = [...digits];
       chars.forEach((c, i) => { next[index + i] = c; });
       setDigits(next);
-      const lastFilled = Math.min(index + chars.length, OTP_LENGTH) - 1;
       const nextEmpty = next.findIndex(d => d === '');
-      if (next.every(d => d !== '')) {
-        focusIndex(OTP_LENGTH - 1);
-        submitCode(next.join(''));
-      } else {
-        focusIndex(nextEmpty === -1 ? lastFilled : nextEmpty);
-      }
+      if (next.every(d => d !== '')) { focusIndex(OTP_LENGTH - 1); submitCode(next.join('')); }
+      else { focusIndex(nextEmpty); }
       return;
     }
-
-    const next = [...digits];
-    next[index] = cleaned;
-    setDigits(next);
+    const next = [...digits]; next[index] = cleaned; setDigits(next);
     if (index < OTP_LENGTH - 1) focusIndex(index + 1);
-    if (next.every(d => d !== '')) {
-      submitCode(next.join(''));
-    }
+    if (next.every(d => d !== '')) submitCode(next.join(''));
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Backspace') {
       if (digits[index]) {
-        const next = [...digits];
-        next[index] = '';
-        setDigits(next);
-        if (errorMsg) setErrorMsg('');
-        e.preventDefault();
+        const next = [...digits]; next[index] = ''; setDigits(next); e.preventDefault();
       } else if (index > 0) {
-        const next = [...digits];
-        next[index - 1] = '';
-        setDigits(next);
-        focusIndex(index - 1);
-        if (errorMsg) setErrorMsg('');
-        e.preventDefault();
+        const next = [...digits]; next[index - 1] = ''; setDigits(next); focusIndex(index - 1); e.preventDefault();
       }
-    } else if (e.key === 'ArrowLeft' && index > 0) {
-      focusIndex(index - 1);
-    } else if (e.key === 'ArrowRight' && index < OTP_LENGTH - 1) {
-      focusIndex(index + 1);
-    }
+      if (errorMsg) setErrorMsg('');
+    } else if (e.key === 'ArrowLeft' && index > 0) focusIndex(index - 1);
+    else if (e.key === 'ArrowRight' && index < OTP_LENGTH - 1) focusIndex(index + 1);
   };
+
+  const regValid = phoneDigits(regPhone) && /^\S+@\S+\.\S+$/.test(regEmail.trim()) && agreed;
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
@@ -170,24 +208,71 @@ export default function AuthPage() {
           <CardDescription>Мастера и заказы в Якутии</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSendOtp} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Номер телефона</label>
-              <Input
-                type="tel"
-                placeholder="+7 (___) ___-__-__"
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Отправка...' : 'Получить код'}
-            </Button>
-            <p className="text-xs text-center text-muted-foreground">
-              Тестовый режим: код всегда <span className="font-mono font-bold">{TEST_OTP_CODE}</span>
-            </p>
-          </form>
+          <Tabs value={tab} onValueChange={(v) => setTab(v as 'login' | 'register')}>
+            <TabsList className="grid grid-cols-2 w-full mb-4">
+              <TabsTrigger value="login">Вход</TabsTrigger>
+              <TabsTrigger value="register">Регистрация</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="login">
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Телефон</label>
+                  <Input
+                    type="tel"
+                    placeholder="+7 (___) ___-__-__"
+                    value={loginPhone}
+                    onChange={e => setLoginPhone(formatPhone(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Email <span className="text-muted-foreground font-normal">(опционально)</span></label>
+                  <Input type="email" placeholder="you@example.com" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                  Получить код
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  Тестовый код: <span className="font-mono font-bold">{TEST_OTP_CODE}</span>
+                </p>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="register">
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Телефон <span className="text-destructive">*</span></label>
+                  <Input
+                    type="tel"
+                    placeholder="+7 (___) ___-__-__"
+                    value={regPhone}
+                    onChange={e => setRegPhone(formatPhone(e.target.value))}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Email <span className="text-destructive">*</span></label>
+                  <Input type="email" placeholder="you@example.com" value={regEmail} onChange={e => setRegEmail(e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Имя <span className="text-muted-foreground font-normal">(опционально)</span></label>
+                  <Input placeholder="Как к вам обращаться" value={regName} onChange={e => setRegName(e.target.value)} />
+                </div>
+                <label className="flex items-start gap-2 text-sm cursor-pointer">
+                  <Checkbox checked={agreed} onCheckedChange={(v) => setAgreed(v === true)} className="mt-0.5" />
+                  <span className="text-muted-foreground leading-snug">
+                    Я принимаю условия{' '}
+                    <Link to="/terms" target="_blank" className="text-primary underline">Пользовательского соглашения</Link>{' '}
+                    и даю согласие на{' '}
+                    <Link to="/privacy" target="_blank" className="text-primary underline">обработку персональных данных</Link>
+                  </span>
+                </label>
+                <Button type="submit" className="w-full" disabled={!regValid || loading}>
+                  Зарегистрироваться
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
 
@@ -196,14 +281,14 @@ export default function AuthPage() {
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
-          className="w-[90vw] max-w-[400px] p-7 sm:p-8 bg-white text-neutral-800 border-0 rounded-2xl shadow-2xl data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 [&>button]:hidden"
+          className="w-[90vw] max-w-[400px] p-7 sm:p-8 bg-white text-neutral-800 border-0 rounded-2xl shadow-2xl [&>button]:hidden"
         >
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-2xl font-extrabold text-neutral-900 text-center">
               Введите код подтверждения
             </DialogTitle>
             <DialogDescription className="text-center text-neutral-500">
-              Код отправлен на <span className="font-semibold text-neutral-800">{phone}</span>
+              Код отправлен на <span className="font-semibold text-neutral-800">{otpTarget}</span>
             </DialogDescription>
           </DialogHeader>
 
@@ -226,21 +311,15 @@ export default function AuthPage() {
                     onKeyDown={(e) => handleKeyDown(i, e)}
                     onFocus={(e) => e.currentTarget.select()}
                     className={`h-14 w-14 text-center text-2xl font-bold rounded-lg border-2 outline-none transition-colors ${
-                      filled
-                        ? 'bg-[#FFC107] border-[#FFC107] text-[#333333]'
-                        : 'bg-white border-[#D1D5DB] text-[#333333]'
+                      filled ? 'bg-[#FFC107] border-[#FFC107] text-[#333333]' : 'bg-white border-[#D1D5DB] text-[#333333]'
                     } focus:border-[#FFC107]`}
                     style={{ caretColor: '#333333' }}
                   />
                 );
               })}
             </div>
-            {errorMsg && (
-              <p className="text-sm text-neutral-600">{errorMsg}</p>
-            )}
-            {loading && (
-              <p className="text-sm text-neutral-500">Проверка...</p>
-            )}
+            {errorMsg && <p className="text-sm text-neutral-600">{errorMsg}</p>}
+            {loading && <p className="text-sm text-neutral-500">Проверка...</p>}
           </div>
 
           <div className="text-center text-sm">
@@ -251,7 +330,7 @@ export default function AuthPage() {
             ) : (
               <button
                 type="button"
-                onClick={handleResend}
+                onClick={() => { setSecondsLeft(RESEND_SECONDS); resetOtp(); toast({ title: 'Код отправлен повторно', description: `Тестовый код: ${TEST_OTP_CODE}` }); }}
                 className="text-primary font-semibold hover:underline"
               >
                 Отправить код повторно
