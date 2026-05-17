@@ -44,6 +44,38 @@ export type Database = {
         }
         Relationships: []
       }
+      availabilities: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          is_booked: boolean
+          listing_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          is_booked?: boolean
+          listing_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          is_booked?: boolean
+          listing_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availabilities_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       complaints: {
         Row: {
           created_at: string
@@ -215,6 +247,45 @@ export type Database = {
           status?: Database["public"]["Enums"]["contract_status"]
           subject?: string
           task_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      listings: {
+        Row: {
+          address: string | null
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          owner_id: string
+          photos: string[]
+          price_per_night: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          owner_id: string
+          photos?: string[]
+          price_per_night?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          owner_id?: string
+          photos?: string[]
+          price_per_night?: number | null
+          title?: string
           updated_at?: string
         }
         Relationships: []
@@ -516,6 +587,74 @@ export type Database = {
           },
         ]
       }
+      ride_bookings: {
+        Row: {
+          created_at: string
+          id: string
+          passenger_id: string
+          ride_id: string
+          seats: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          passenger_id: string
+          ride_id: string
+          seats?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          passenger_id?: string
+          ride_id?: string
+          seats?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ride_bookings_ride_id_fkey"
+            columns: ["ride_id"]
+            isOneToOne: false
+            referencedRelation: "rides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rides: {
+        Row: {
+          created_at: string
+          departure_time: string
+          driver_id: string
+          id: string
+          price: number | null
+          route: Json
+          seats_available: number
+          seats_total: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          departure_time: string
+          driver_id: string
+          id?: string
+          price?: number | null
+          route?: Json
+          seats_available: number
+          seats_total: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          departure_time?: string
+          driver_id?: string
+          id?: string
+          price?: number | null
+          route?: Json
+          seats_available?: number
+          seats_total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           address: string | null
@@ -528,6 +667,9 @@ export type Database = {
           id: string
           lat: number | null
           lng: number | null
+          meta: Json
+          order_status: Database["public"]["Enums"]["order_status"]
+          order_type: Database["public"]["Enums"]["order_type"]
           phone: string | null
           photos: string[] | null
           price: number | null
@@ -547,6 +689,9 @@ export type Database = {
           id?: string
           lat?: number | null
           lng?: number | null
+          meta?: Json
+          order_status?: Database["public"]["Enums"]["order_status"]
+          order_type?: Database["public"]["Enums"]["order_type"]
           phone?: string | null
           photos?: string[] | null
           price?: number | null
@@ -566,6 +711,9 @@ export type Database = {
           id?: string
           lat?: number | null
           lng?: number | null
+          meta?: Json
+          order_status?: Database["public"]["Enums"]["order_status"]
+          order_type?: Database["public"]["Enums"]["order_type"]
           phone?: string | null
           photos?: string[] | null
           price?: number | null
@@ -605,6 +753,30 @@ export type Database = {
         }
         Relationships: []
       }
+      wallets: {
+        Row: {
+          balance: number
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -634,6 +806,13 @@ export type Database = {
         | "approved"
         | "signed"
         | "cancelled"
+      order_status:
+        | "pending"
+        | "paid"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
+      order_type: "service" | "rent" | "ride" | "cargo"
       response_status: "pending" | "accepted" | "rejected"
       task_status: "open" | "in_progress" | "completed" | "cancelled"
     }
@@ -773,6 +952,14 @@ export const Constants = {
         "signed",
         "cancelled",
       ],
+      order_status: [
+        "pending",
+        "paid",
+        "in_progress",
+        "completed",
+        "cancelled",
+      ],
+      order_type: ["service", "rent", "ride", "cargo"],
       response_status: ["pending", "accepted", "rejected"],
       task_status: ["open", "in_progress", "completed", "cancelled"],
     },
