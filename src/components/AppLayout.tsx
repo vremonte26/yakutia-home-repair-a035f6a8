@@ -6,6 +6,7 @@ import { NotificationBell } from '@/components/NotificationBell';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserLocation } from '@/hooks/useUserLocation';
+import { RoleSwitchDialog } from '@/components/RoleSwitchDialog';
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const { profile, user, refreshProfile } = useAuth();
@@ -13,6 +14,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [switching, setSwitching] = useState(false);
+  const [clientSetupOpen, setClientSetupOpen] = useState(false);
   const locationLabel = useUserLocation();
   const headerRef = useRef<HTMLElement>(null);
 
@@ -34,17 +36,22 @@ export function AppLayout({ children }: { children: ReactNode }) {
     if (!user || !profile || switching) return;
     const newRole = isMaster ? 'client' : 'master';
     setSwitching(true);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ role: newRole })
-      .eq('id', user.id);
+    const { data, error } = await supabase.rpc('switch_active_role', { _new_role: newRole });
+    setSwitching(false);
     if (error) {
       toast({ title: 'Не удалось переключить роль', description: error.message, variant: 'destructive' });
-      setSwitching(false);
+      return;
+    }
+    const result = data as { ok: boolean; needs_setup?: boolean } | null;
+    if (result && !result.ok && result.needs_setup) {
+      if (newRole === 'master') {
+        navigate('/master-setup');
+      } else {
+        setClientSetupOpen(true);
+      }
       return;
     }
     await refreshProfile();
-    setSwitching(false);
     navigate('/');
   };
 
@@ -120,6 +127,11 @@ export function AppLayout({ children }: { children: ReactNode }) {
           })}
         </div>
       </nav>
+      <RoleSwitchDialog
+        open={clientSetupOpen}
+        onOpenChange={setClientSetupOpen}
+        onDone={async () => { await refreshProfile(); navigate('/'); }}
+      />
     </div>
   );
 }
