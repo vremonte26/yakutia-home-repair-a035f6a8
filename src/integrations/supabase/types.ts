@@ -329,6 +329,8 @@ export type Database = {
       messages: {
         Row: {
           created_at: string
+          from_name_snapshot: string | null
+          from_photo_snapshot: string | null
           from_user: string
           id: string
           image_url: string | null
@@ -338,6 +340,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          from_name_snapshot?: string | null
+          from_photo_snapshot?: string | null
           from_user: string
           id?: string
           image_url?: string | null
@@ -347,6 +351,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          from_name_snapshot?: string | null
+          from_photo_snapshot?: string | null
           from_user?: string
           id?: string
           image_url?: string | null
@@ -414,8 +420,10 @@ export type Database = {
       profiles: {
         Row: {
           about: string | null
+          active_role: Database["public"]["Enums"]["app_role"] | null
           blocked_until: string | null
           categories: string[] | null
+          client_data: Json
           created_at: string
           id: string
           is_active: boolean
@@ -423,6 +431,8 @@ export type Database = {
           is_verified: boolean | null
           lat: number | null
           lng: number | null
+          master_data: Json
+          master_pending_changes: Json | null
           name: string
           notification_prefs: Json
           phone: string | null
@@ -435,8 +445,10 @@ export type Database = {
         }
         Insert: {
           about?: string | null
+          active_role?: Database["public"]["Enums"]["app_role"] | null
           blocked_until?: string | null
           categories?: string[] | null
+          client_data?: Json
           created_at?: string
           id: string
           is_active?: boolean
@@ -444,6 +456,8 @@ export type Database = {
           is_verified?: boolean | null
           lat?: number | null
           lng?: number | null
+          master_data?: Json
+          master_pending_changes?: Json | null
           name?: string
           notification_prefs?: Json
           phone?: string | null
@@ -456,8 +470,10 @@ export type Database = {
         }
         Update: {
           about?: string | null
+          active_role?: Database["public"]["Enums"]["app_role"] | null
           blocked_until?: string | null
           categories?: string[] | null
+          client_data?: Json
           created_at?: string
           id?: string
           is_active?: boolean
@@ -465,6 +481,8 @@ export type Database = {
           is_verified?: boolean | null
           lat?: number | null
           lng?: number | null
+          master_data?: Json
+          master_pending_changes?: Json | null
           name?: string
           notification_prefs?: Json
           phone?: string | null
@@ -482,6 +500,8 @@ export type Database = {
           created_at: string
           id: string
           master_id: string
+          master_name_snapshot: string | null
+          master_photo_snapshot: string | null
           message: string | null
           status: Database["public"]["Enums"]["response_status"]
           task_id: string
@@ -490,6 +510,8 @@ export type Database = {
           created_at?: string
           id?: string
           master_id: string
+          master_name_snapshot?: string | null
+          master_photo_snapshot?: string | null
           message?: string | null
           status?: Database["public"]["Enums"]["response_status"]
           task_id: string
@@ -498,6 +520,8 @@ export type Database = {
           created_at?: string
           id?: string
           master_id?: string
+          master_name_snapshot?: string | null
+          master_photo_snapshot?: string | null
           message?: string | null
           status?: Database["public"]["Enums"]["response_status"]
           task_id?: string
@@ -523,6 +547,8 @@ export type Database = {
         Row: {
           comment: string | null
           created_at: string
+          from_name_snapshot: string | null
+          from_photo_snapshot: string | null
           from_user: string
           hidden_reason: string | null
           id: string
@@ -535,6 +561,8 @@ export type Database = {
         Insert: {
           comment?: string | null
           created_at?: string
+          from_name_snapshot?: string | null
+          from_photo_snapshot?: string | null
           from_user: string
           hidden_reason?: string | null
           id?: string
@@ -547,6 +575,8 @@ export type Database = {
         Update: {
           comment?: string | null
           created_at?: string
+          from_name_snapshot?: string | null
+          from_photo_snapshot?: string | null
           from_user?: string
           hidden_reason?: string | null
           id?: string
@@ -662,6 +692,8 @@ export type Database = {
           address_full: string | null
           category: string
           client_id: string
+          client_name_snapshot: string | null
+          client_photo_snapshot: string | null
           created_at: string
           description: string | null
           id: string
@@ -684,6 +716,8 @@ export type Database = {
           address_full?: string | null
           category: string
           client_id: string
+          client_name_snapshot?: string | null
+          client_photo_snapshot?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -706,6 +740,8 @@ export type Database = {
           address_full?: string | null
           category?: string
           client_id?: string
+          client_name_snapshot?: string | null
+          client_photo_snapshot?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -782,6 +818,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_master_changes: { Args: { _user_id: string }; Returns: undefined }
+      create_master_profile: { Args: { _data: Json }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["admin_role"]
@@ -794,6 +832,20 @@ export type Database = {
       notif_pref_enabled: {
         Args: { _key: string; _user_id: string }
         Returns: boolean
+      }
+      reject_master_changes: {
+        Args: { _reason?: string; _user_id: string }
+        Returns: undefined
+      }
+      request_master_changes: { Args: { _data: Json }; Returns: undefined }
+      snapshot_author: { Args: { _uid: string }; Returns: Json }
+      switch_active_role: {
+        Args: { _new_role: Database["public"]["Enums"]["app_role"] }
+        Returns: Json
+      }
+      upsert_client_data: {
+        Args: { _name: string; _phone: string; _photo: string }
+        Returns: undefined
       }
     }
     Enums: {
