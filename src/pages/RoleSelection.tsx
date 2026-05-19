@@ -23,10 +23,14 @@ export default function RoleSelection() {
   const confirmClient = async () => {
     if (!user) return;
     setLoading(true);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ role: 'client' as const, name: name.trim() || 'Клиент' })
-      .eq('id', user.id);
+    const { error } = await supabase.rpc('upsert_client_data', {
+      _name: name.trim() || 'Клиент',
+      _photo: null,
+      _phone: null,
+    });
+    if (!error) {
+      await supabase.rpc('switch_active_role', { _new_role: 'client' });
+    }
     setLoading(false);
     if (error) {
       toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
@@ -40,7 +44,7 @@ export default function RoleSelection() {
     if (!user) return;
     const { error } = await supabase
       .from('profiles')
-      .update({ role: 'master' as const })
+      .update({ role: 'master' as const, active_role: 'master' as const })
       .eq('id', user.id);
     if (error) {
       toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
