@@ -338,7 +338,7 @@ export default function AuthPage() {
                 );
               })}
             </div>
-            {errorMsg && <p className="text-sm text-neutral-600">{errorMsg}</p>}
+            {errorMsg && <p className="text-sm font-medium text-red-600">{errorMsg}</p>}
             {loading && <p className="text-sm text-neutral-500">Проверка...</p>}
           </div>
 
@@ -369,6 +369,19 @@ export default function AuthPage() {
               </button>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setOtpOpen(false);
+              setDigits(Array(OTP_LENGTH).fill(''));
+              setErrorMsg('');
+              setSentCode('');
+            }}
+            className="mt-2 text-sm text-neutral-500 hover:text-neutral-800 hover:underline mx-auto"
+          >
+            Назад
+          </button>
         </DialogContent>
       </Dialog>
     </div>
