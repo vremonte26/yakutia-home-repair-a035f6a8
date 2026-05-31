@@ -4,7 +4,6 @@ export default async function handler(req, res) {
   }
 
   const { phone, code } = req.body;
-
   const apiKey = process.env.SMS_RU_API_KEY;
 
   if (!apiKey) {
