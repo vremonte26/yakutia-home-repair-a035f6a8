@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    return res.status(405).json({ error: 'Метод не разрешен' });
   }
 
   const { phone, code } = req.body;
@@ -9,34 +9,26 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Телефон и код обязательны' });
   }
 
-  const apiKey = process.env.SMS_RU_API_KEY;
+  const login = process.env.SMSC_LOGIN;
+  const password = process.env.SMSC_PASSWORD;
 
-  if (!apiKey) {
-    return res.status(500).json({ error: 'SMS_RU_API_KEY not set' });
+  if (!login || !password) {
+    return res.status(500).json({ error: 'SMSC_LOGIN или SMSC_PASSWORD не заданы' });
   }
 
+  const url = `https://smsc.ru/sys/send.php?login=${login}&psw=${password}&phones=${phone}&mes=Ваш+код+для+входа+в+Времонте:+${code}&fmt=3`;
+
   try {
-    const params = new URLSearchParams({
-      api_id: apiKey,
-      to: phone,
-      msg: `Ваш код для входа в МастерБул: ${code}`,
-      json: 1,
-    });
+    const response = await fetch(url);
+    const data = await response.json();
 
-    const response = await fetch('https://sms.ru/sms/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: params,
-    });
-
-    const result = await response.json();
-
-    if (result.status === 'OK') {
-      return res.status(200).json({ success: true, result });
+    if (data.error_code === 0) {
+      return res.status(200).json({ success: true, sms_id: data.id });
     } else {
-      return res.status(500).json({ error: result.status_text, details: result });
+      return res.status(500).json({ 
+        error: data.error || 'Ошибка отправки SMS', 
+        error_code: data.error_code 
+      });
     }
   } catch (error) {
     console.error('Ошибка отправки SMS:', error);
