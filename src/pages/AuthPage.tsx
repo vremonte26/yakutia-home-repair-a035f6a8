@@ -51,6 +51,7 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [otpTarget, setOtpTarget] = useState('');
   const [sentCode, setSentCode] = useState('');
+  const [codeExpiresAt, setCodeExpiresAt] = useState<number>(0);
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
   const submittingRef = useRef(false);
 
@@ -78,34 +79,16 @@ export default function AuthPage() {
   const generateCode = () =>
     Math.floor(1000 + Math.random() * 9000).toString().padStart(OTP_LENGTH, '0');
 
-  const sendSms = async (phone: string, code: string) => {
-    const res = await fetch('/api/send-sms', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, code }),
-    });
-    if (!res.ok) throw new Error('sms failed');
-    return res.json().catch(() => ({}));
-  };
-
-  const openOtp = async (mode: 'login' | 'register', target: string, phone: string) => {
+  const openOtp = (mode: 'login' | 'register', target: string, phone: string) => {
     const code = generateCode();
-    setLoading(true);
-    try {
-      if (phone) await sendSms(phone, code);
-      setSentCode(code);
-      setOtpMode(mode);
-      setOtpTarget(target);
-      setDigits(Array(OTP_LENGTH).fill(''));
-      setErrorMsg('');
-      setSecondsLeft(RESEND_SECONDS);
-      setOtpOpen(true);
-      toast({ title: 'Код отправлен', description: phone ? `На номер ${phone}` : `На ${target}` });
-    } catch {
-      toast({ title: 'Не удалось отправить код', description: 'Попробуйте ещё раз позже', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
+    setSentCode(code);
+    setCodeExpiresAt(Date.now() + 5 * 60 * 1000);
+    setOtpMode(mode);
+    setOtpTarget(target);
+    setDigits(Array(OTP_LENGTH).fill(''));
+    setErrorMsg('');
+    setSecondsLeft(RESEND_SECONDS);
+    setOtpOpen(true);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -145,8 +128,8 @@ export default function AuthPage() {
   const submitCode = async (code: string) => {
     if (submittingRef.current) return;
     submittingRef.current = true;
-    if (code !== sentCode) {
-      setErrorMsg('Неверный код. Попробуйте ещё раз');
+    if (code !== sentCode || Date.now() > codeExpiresAt) {
+      setErrorMsg('Неверный или просроченный код. Попробуйте снова');
       resetOtp();
       submittingRef.current = false;
       return;
@@ -342,6 +325,12 @@ export default function AuthPage() {
             {loading && <p className="text-sm text-neutral-500">Проверка...</p>}
           </div>
 
+          <div className="rounded-xl border-2 border-dashed border-[#FFC107] bg-amber-50 p-4 text-center">
+            <p className="text-xs uppercase tracking-wide text-neutral-500 mb-1">Ваш код подтверждения</p>
+            <p className="text-3xl font-extrabold tracking-[0.4em] text-neutral-900">{sentCode}</p>
+            <p className="text-xs text-neutral-500 mt-2">Код действует 5 минут</p>
+          </div>
+
           <div className="text-center text-sm">
             {secondsLeft > 0 ? (
               <span className="text-neutral-500">
@@ -350,18 +339,14 @@ export default function AuthPage() {
             ) : (
               <button
                 type="button"
-                onClick={async () => {
-                  const phone = otpMode === 'login' ? phoneDigits(loginPhone) : phoneDigits(regPhone);
+                onClick={() => {
                   const code = generateCode();
-                  try {
-                    if (phone) await sendSms(phone, code);
-                    setSentCode(code);
-                    setSecondsLeft(RESEND_SECONDS);
-                    resetOtp();
-                    toast({ title: 'Код отправлен повторно', description: phone ? `На номер ${phone}` : `На ${otpTarget}` });
-                  } catch {
-                    toast({ title: 'Не удалось отправить код', variant: 'destructive' });
-                  }
+                  setSentCode(code);
+                  setCodeExpiresAt(Date.now() + 5 * 60 * 1000);
+                  setSecondsLeft(RESEND_SECONDS);
+                  resetOtp();
+                  setErrorMsg('');
+                  toast({ title: 'Новый код сгенерирован' });
                 }}
                 className="text-primary font-semibold hover:underline"
               >
