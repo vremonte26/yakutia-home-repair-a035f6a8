@@ -51,6 +51,7 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [otpTarget, setOtpTarget] = useState('');
   const [sentCode, setSentCode] = useState('');
+  const [codeExpiresAt, setCodeExpiresAt] = useState<number>(0);
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
   const submittingRef = useRef(false);
 
@@ -78,34 +79,16 @@ export default function AuthPage() {
   const generateCode = () =>
     Math.floor(1000 + Math.random() * 9000).toString().padStart(OTP_LENGTH, '0');
 
-  const sendSms = async (phone: string, code: string) => {
-    const res = await fetch('/api/send-sms', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, code }),
-    });
-    if (!res.ok) throw new Error('sms failed');
-    return res.json().catch(() => ({}));
-  };
-
-  const openOtp = async (mode: 'login' | 'register', target: string, phone: string) => {
+  const openOtp = (mode: 'login' | 'register', target: string, phone: string) => {
     const code = generateCode();
-    setLoading(true);
-    try {
-      if (phone) await sendSms(phone, code);
-      setSentCode(code);
-      setOtpMode(mode);
-      setOtpTarget(target);
-      setDigits(Array(OTP_LENGTH).fill(''));
-      setErrorMsg('');
-      setSecondsLeft(RESEND_SECONDS);
-      setOtpOpen(true);
-      toast({ title: 'Код отправлен', description: phone ? `На номер ${phone}` : `На ${target}` });
-    } catch {
-      toast({ title: 'Не удалось отправить код', description: 'Попробуйте ещё раз позже', variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
+    setSentCode(code);
+    setCodeExpiresAt(Date.now() + 5 * 60 * 1000);
+    setOtpMode(mode);
+    setOtpTarget(target);
+    setDigits(Array(OTP_LENGTH).fill(''));
+    setErrorMsg('');
+    setSecondsLeft(RESEND_SECONDS);
+    setOtpOpen(true);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -145,8 +128,8 @@ export default function AuthPage() {
   const submitCode = async (code: string) => {
     if (submittingRef.current) return;
     submittingRef.current = true;
-    if (code !== sentCode) {
-      setErrorMsg('Неверный код. Попробуйте ещё раз');
+    if (code !== sentCode || Date.now() > codeExpiresAt) {
+      setErrorMsg('Неверный или просроченный код. Попробуйте снова');
       resetOtp();
       submittingRef.current = false;
       return;
