@@ -325,6 +325,12 @@ export default function AuthPage() {
             {loading && <p className="text-sm text-neutral-500">Проверка...</p>}
           </div>
 
+          <div className="rounded-xl border-2 border-dashed border-[#FFC107] bg-amber-50 p-4 text-center">
+            <p className="text-xs uppercase tracking-wide text-neutral-500 mb-1">Ваш код подтверждения</p>
+            <p className="text-3xl font-extrabold tracking-[0.4em] text-neutral-900">{sentCode}</p>
+            <p className="text-xs text-neutral-500 mt-2">Код действует 5 минут</p>
+          </div>
+
           <div className="text-center text-sm">
             {secondsLeft > 0 ? (
               <span className="text-neutral-500">
@@ -333,18 +339,14 @@ export default function AuthPage() {
             ) : (
               <button
                 type="button"
-                onClick={async () => {
-                  const phone = otpMode === 'login' ? phoneDigits(loginPhone) : phoneDigits(regPhone);
+                onClick={() => {
                   const code = generateCode();
-                  try {
-                    if (phone) await sendSms(phone, code);
-                    setSentCode(code);
-                    setSecondsLeft(RESEND_SECONDS);
-                    resetOtp();
-                    toast({ title: 'Код отправлен повторно', description: phone ? `На номер ${phone}` : `На ${otpTarget}` });
-                  } catch {
-                    toast({ title: 'Не удалось отправить код', variant: 'destructive' });
-                  }
+                  setSentCode(code);
+                  setCodeExpiresAt(Date.now() + 5 * 60 * 1000);
+                  setSecondsLeft(RESEND_SECONDS);
+                  resetOtp();
+                  setErrorMsg('');
+                  toast({ title: 'Новый код сгенерирован' });
                 }}
                 className="text-primary font-semibold hover:underline"
               >
