@@ -1,117 +1,119 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
-import { initOneSignal, promptPushPermission, setOneSignalExternalUserId, removeOneSignalExternalUserId } from '@/lib/onesignal';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export interface Profile {
+type User = {
   id: string;
-  phone: string | null;
   name: string;
-  role: 'client' | 'master';
-  photo: string | null;
-  categories: string[] | null;
-  work_area: string | null;
-  about: string | null;
-  is_active: boolean;
-  is_verified: boolean | null;
-  rating: number | null;
-  is_photo_moderated: boolean;
-}
+  phone: string;
+  email: string;
+  role?: 'client' | 'master';
+  registeredAt: string;
+};
 
-interface AuthContextType {
+type AuthContextType = {
   user: User | null;
-  session: Session | null;
-  profile: Profile | null;
+  profile: User | null;
   loading: boolean;
-  signUp: (email: string, password: string, name: string, phone?: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>;
-}
+  signUp: (email: string, password: string, name: string, phone: string) => Promise<void>;
+  signOut: () => void;
+  updateProfile: (data: Partial<User>) => Promise<void>;
+};
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    setProfile(data as Profile | null);
-  };
-
+  // Проверяем, есть ли пользователь в localStorage при загрузке
   useEffect(() => {
-    initOneSignal();
-  }, []);
-
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          setTimeout(() => fetchProfile(session.user.id), 0);
-          setOneSignalExternalUserId(session.user.id);
-          promptPushPermission();
-        } else {
-          setProfile(null);
-          removeOneSignalExternalUserId();
-        }
-        setLoading(false);
+    const savedUser = localStorage.getItem('masterbul_current_user');
+    if (savedUser) {
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        setUser(parsedUser);
+        setProfile(parsedUser);
+      } catch (e) {
+        console.error('Ошибка загрузки пользователя:', e);
       }
-    );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-        setOneSignalExternalUserId(session.user.id);
-        promptPushPermission();
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    }
+    setLoading(false);
   }, []);
-
-  const signUp = async (email: string, password: string, name: string, phone?: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { name, phone } },
-    });
-    if (error) throw error;
-  };
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    const users = JSON.parse(localStorage.getItem('masterbul_users') || '[]');
+    const foundUser = users.find((u: any) => u.email === email);
+    
+    if (!foundUser) {
+      throw new Error('Пользователь не найден');
+    }
+    
+    localStorage.setItem('masterbul_current_user', JSON.stringify(foundUser));
+    setUser(foundUser);
+    setProfile(foundUser);
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
+  const signUp = async (email: string, password: string, name: string, phone: string) => {
+    const users = JSON.parse(localStorage.getItem('masterbul_users') || '[]');
+    
+    // Проверяем, не существует ли уже такой пользователь
+    if (users.find((u: any) => u.email === email)) {
+      throw new Error('Пользователь с таким email уже существует');
+    }
+    if (users.find((u: any) => u.phone === phone)) {
+      throw new Error('Пользователь с таким телефоном уже существует');
+    }
+    
+    const newUser: User = {
+      id: Date.now().toString(),
+      name: name || 'Пользователь',
+      phone: phone,
+      email: email,
+      registeredAt: new Date().toISOString(),
+    };
+    
+    users.push(newUser);
+    localStorage.setItem('masterbul_users', JSON.stringify(users));
+    localStorage.setItem('masterbul_current_user', JSON.stringify(newUser));
+    setUser(newUser);
+    setProfile(newUser);
   };
 
-  const refreshProfile = async () => {
-    if (user) await fetchProfile(user.id);
+  const signOut = () => {
+    localStorage.removeItem('masterbul_current_user');
+    setUser(null);
+    setProfile(null);
+    window.location.href = '/';
+  };
+
+  const updateProfile = async (data: Partial<User>) => {
+    if (!user) return;
+    const updatedUser = { ...user, ...data };
+    localStorage.setItem('masterbul_current_user', JSON.stringify(updatedUser));
+    
+    const users = JSON.parse(localStorage.getItem('masterbul_users') || '[]');
+    const index = users.findIndex((u: any) => u.id === user.id);
+    if (index !== -1) {
+      users[index] = updatedUser;
+      localStorage.setItem('masterbul_users', JSON.stringify(users));
+    }
+    
+    setUser(updatedUser);
+    setProfile(updatedUser);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signUp, signIn, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 }
