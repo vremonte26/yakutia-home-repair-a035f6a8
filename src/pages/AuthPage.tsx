@@ -122,17 +122,18 @@ export default function AuthPage() {
         return;
       }
     } catch (e) {
-      // Если ошибка - просто игнорируем
       console.log('Ошибка проверки пользователей:', e);
     }
     
     openOtp('register', phone);
   };
 
+  // ✅ ПРОСТАЯ И РАБОЧАЯ ЛОГИКА ВХОДА
   const submitCode = (code: string) => {
     if (submittingRef.current) return;
     submittingRef.current = true;
     
+    // Проверяем код
     if (code !== sentCode || Date.now() > codeExpiresAt) {
       setErrorMsg('Неверный или просроченный код. Попробуйте снова');
       resetOtp();
@@ -140,13 +141,12 @@ export default function AuthPage() {
       return;
     }
     
-    setErrorMsg('');
     setLoading(true);
     
     try {
       const phone = phoneDigits(otpMode === 'login' ? loginPhone : regPhone);
       const email = otpMode === 'login' ? loginEmail.trim() : regEmail.trim().toLowerCase();
-      const name = otpMode === 'register' ? regName.trim() : '';
+      const name = otpMode === 'register' ? regName.trim() : 'Пользователь';
       
       // Получаем список пользователей
       let users = [];
@@ -156,48 +156,38 @@ export default function AuthPage() {
         users = [];
       }
       
-      if (otpMode === 'login') {
-        // Вход - проверяем, есть ли пользователь
-        const user = users.find((u: any) => u.phone === phone || (u.email && u.email === email));
-        if (!user) {
-          // Если нет - создаем нового
-          const newUser = {
-            id: Date.now().toString(),
-            name: 'Пользователь',
-            phone: phone,
-            email: email || '',
-            registeredAt: new Date().toISOString(),
-          };
-          users.push(newUser);
-          localStorage.setItem('masterbul_users', JSON.stringify(users));
-          localStorage.setItem('masterbul_current_user', JSON.stringify(newUser));
-        } else {
-          localStorage.setItem('masterbul_current_user', JSON.stringify(user));
-        }
-      } else {
-        // Регистрация
-        const newUser = {
+      // Ищем пользователя
+      let user = users.find((u: any) => u.phone === phone);
+      
+      if (!user) {
+        // Создаём нового пользователя
+        user = {
           id: Date.now().toString(),
-          name: name || 'Пользователь',
+          name: name,
           phone: phone,
-          email: email,
+          email: email || '',
           registeredAt: new Date().toISOString(),
         };
-        users.push(newUser);
+        users.push(user);
         localStorage.setItem('masterbul_users', JSON.stringify(users));
-        localStorage.setItem('masterbul_current_user', JSON.stringify(newUser));
       }
       
+      // Сохраняем текущего пользователя
+      localStorage.setItem('masterbul_current_user', JSON.stringify(user));
+      
+      // Закрываем модалку
       setOtpOpen(false);
-      // Перезагружаем страницу для перехода в приложение
+      setLoading(false);
+      submittingRef.current = false;
+      
+      // ✅ ПЕРЕЗАГРУЖАЕМ СТРАНИЦУ — ЭТО ВАЖНО!
       window.location.href = '/';
       
     } catch (err: any) {
       setErrorMsg('Ошибка: ' + err.message);
-      resetOtp();
-    } finally {
       setLoading(false);
       submittingRef.current = false;
+      resetOtp();
     }
   };
 
@@ -213,13 +203,21 @@ export default function AuthPage() {
       chars.forEach((c, i) => { next[index + i] = c; });
       setDigits(next);
       const nextEmpty = next.findIndex(d => d === '');
-      if (next.every(d => d !== '')) { focusIndex(OTP_LENGTH - 1); submitCode(next.join('')); }
-      else { focusIndex(nextEmpty); }
+      if (next.every(d => d !== '')) { 
+        focusIndex(OTP_LENGTH - 1); 
+        submitCode(next.join('')); 
+      } else { 
+        focusIndex(nextEmpty); 
+      }
       return;
     }
-    const next = [...digits]; next[index] = cleaned; setDigits(next);
+    const next = [...digits]; 
+    next[index] = cleaned; 
+    setDigits(next);
     if (index < OTP_LENGTH - 1) focusIndex(index + 1);
-    if (next.every(d => d !== '')) submitCode(next.join(''));
+    if (next.every(d => d !== '')) {
+      submitCode(next.join(''));
+    }
   };
 
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
