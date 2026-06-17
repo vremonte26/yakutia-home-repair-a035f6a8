@@ -3,13 +3,12 @@ import { useAuth } from '@/hooks/useAuth';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, PlusCircle, User, Wrench, ClipboardList, Map, MessageCircle, MapPin } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserLocation } from '@/hooks/useUserLocation';
 import { RoleSwitchDialog } from '@/components/RoleSwitchDialog';
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { profile, user, refreshProfile } = useAuth();
+  const { profile, user, refreshProfile, updateProfile } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -36,23 +35,22 @@ export function AppLayout({ children }: { children: ReactNode }) {
     if (!user || !profile || switching) return;
     const newRole = isMaster ? 'client' : 'master';
     setSwitching(true);
-    const { data, error } = await supabase.rpc('switch_active_role', { _new_role: newRole });
-    setSwitching(false);
-    if (error) {
-      toast({ title: 'Не удалось переключить роль', description: error.message, variant: 'destructive' });
-      return;
+    
+    try {
+      // Обновляем роль через updateProfile (работает с localStorage)
+      await updateProfile({ role: newRole });
+      
+      // Перезагружаем страницу, чтобы применить изменения
+      window.location.href = '/';
+    } catch (err: any) {
+      toast({ 
+        title: 'Ошибка переключения роли', 
+        description: err.message, 
+        variant: 'destructive' 
+      });
+    } finally {
+      setSwitching(false);
     }
-    const result = data as { ok: boolean; needs_setup?: boolean } | null;
-    if (result && !result.ok && result.needs_setup) {
-      if (newRole === 'master') {
-        navigate('/master-setup');
-      } else {
-        setClientSetupOpen(true);
-      }
-      return;
-    }
-    await refreshProfile();
-    navigate('/');
   };
 
   const navItems = isMaster
