@@ -87,27 +87,25 @@ export default function ProfilePage() {
     setEditName('');
   };
 
-  const saveProfile = async () => {
-    if (!user) return;
-    const trimmed = editName.trim();
-    if (!trimmed) {
-      toast({ title: 'Имя не может быть пустым', variant: 'destructive' });
-      return;
-    }
-    setIsSaving(true);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ name: trimmed })
-      .eq('id', user.id);
-    setIsSaving(false);
-    if (error) {
-      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
-      return;
-    }
+ const saveProfile = async () => {
+  if (!user) return;
+  const trimmed = editName.trim();
+  if (!trimmed) {
+    toast({ title: 'Имя не может быть пустым', variant: 'destructive' });
+    return;
+  }
+  setIsSaving(true);
+  try {
+    await updateProfile({ name: trimmed });
     await refreshProfile();
     setIsEditing(false);
     toast({ title: 'Имя обновлено' });
-  };
+  } catch (err: any) {
+    toast({ title: 'Ошибка', description: err.message, variant: 'destructive' });
+  } finally {
+    setIsSaving(false);
+  }
+};
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
