@@ -99,7 +99,6 @@ export default function ProfilePage() {
     // Временно отключено
     toast({ title: 'Загрузка фото временно отключена', variant: 'default' });
     return;
-    // Остальной код временно закомментирован
   };
 
   const switchRole = async () => {
@@ -115,8 +114,8 @@ export default function ProfilePage() {
         toast({ title: 'Ошибка', description: err.message, variant: 'destructive' });
       }
     } else {
-      // Становимся мастером — открываем анкету
-      navigate('/master-setup');
+      // Становимся мастером — открываем анкету с информацией о том, откуда пришли
+      navigate('/master-setup', { state: { from: '/profile' } });
     }
   };
 
