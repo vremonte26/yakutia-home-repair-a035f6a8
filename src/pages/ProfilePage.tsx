@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CategoryBadge, deduplicateCategories } from '@/components/CategoryBadge';
 import { UserRating } from '@/components/UserRating';
-import { LogOut, ArrowLeftRight, Phone, Clock, X, Trash2, Pencil, Camera, Check, LocateOff, Shield, Star, ChevronRight } from 'lucide-react';
+import { LogOut, ArrowLeftRight, Phone, Clock, X, Trash2, Pencil, Camera, Check, LocateOff, Star, ChevronRight } from 'lucide-react';
 import ClickableAvatar from '@/components/ClickableAvatar';
 import { AdminPanelButton } from '@/components/AdminPanelButton';
 import { NotificationPreferences } from '@/components/NotificationPreferences';
@@ -42,23 +42,11 @@ export default function ProfilePage() {
 
   const lastSeenKey = user ? `reviews:lastSeen:${user.id}` : '';
 
+  // Временно отключено до перехода на localStorage
   useEffect(() => {
-    if (!user) return;
-    const lastSeen = localStorage.getItem(lastSeenKey);
-    supabase
-      .from('reviews')
-      .select('id, from_user, created_at, parent_id, is_hidden')
-      .eq('to_user', user.id)
-      .is('parent_id', null)
-      .eq('is_hidden', false)
-      .then(({ data }) => {
-        const rows = data ?? [];
-        setReviewCount(rows.length);
-        const unread = rows.filter(
-          r => r.from_user !== user.id && (!lastSeen || r.created_at > lastSeen)
-        ).length;
-        setUnreadReviews(unread);
-      });
+    // Отзывы временно отключены
+    // if (!user) return;
+    // ...
   }, [user, lastSeenKey]);
 
   const markReviewsSeen = () => {
@@ -87,128 +75,55 @@ export default function ProfilePage() {
     setEditName('');
   };
 
- const saveProfile = async () => {
-  if (!user) return;
-  const trimmed = editName.trim();
-  if (!trimmed) {
-    toast({ title: 'Имя не может быть пустым', variant: 'destructive' });
-    return;
-  }
-  setIsSaving(true);
-  try {
-    await updateProfile({ name: trimmed });
-    await refreshProfile();
-    setIsEditing(false);
-    toast({ title: 'Имя обновлено' });
-  } catch (err: any) {
-    toast({ title: 'Ошибка', description: err.message, variant: 'destructive' });
-  } finally {
-    setIsSaving(false);
-  }
-};
-
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
-
-    if (profile?.is_photo_moderated || (isMaster && profile?.is_verified === true)) {
-      toast({ title: 'Данные подтверждены модератором. Для изменений обратитесь в поддержку', variant: 'destructive' });
+  const saveProfile = async () => {
+    if (!user) return;
+    const trimmed = editName.trim();
+    if (!trimmed) {
+      toast({ title: 'Имя не может быть пустым', variant: 'destructive' });
       return;
     }
-
-    if (!file.type.startsWith('image/')) {
-      toast({ title: 'Выберите изображение', variant: 'destructive' });
-      return;
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      toast({ title: 'Максимальный размер — 2 МБ', variant: 'destructive' });
-      return;
-    }
-
-    setUploadingPhoto(true);
+    setIsSaving(true);
     try {
-      let compressionFailed = false;
-      const toUpload = await compressImageSafe(file, undefined, () => {
-        compressionFailed = true;
-      });
-      if (compressionFailed) {
-        toast({ title: 'Не удалось сжать фото — загружаем оригинал' });
-      }
-      const ext = (toUpload instanceof File ? toUpload.name : file.name).split('.').pop();
-      const filePath = `${user.id}/avatar.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, toUpload, { upsert: true, contentType: toUpload.type });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      const photoUrl = `${urlData.publicUrl}?t=${Date.now()}`;
-
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ photo: photoUrl })
-        .eq('id', user.id);
-
-      if (updateError) throw updateError;
-
+      await updateProfile({ name: trimmed });
       await refreshProfile();
-      toast({ title: 'Фото обновлено' });
+      setIsEditing(false);
+      toast({ title: 'Имя обновлено' });
     } catch (err: any) {
-      toast({ title: 'Ошибка загрузки', description: err.message, variant: 'destructive' });
+      toast({ title: 'Ошибка', description: err.message, variant: 'destructive' });
     } finally {
-      setUploadingPhoto(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      setIsSaving(false);
     }
   };
 
-  const switchRole = async () => {
-  if (!user || !profile) return;
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Временно отключено
+    toast({ title: 'Загрузка фото временно отключена', variant: 'default' });
+    return;
+    // Остальной код временно закомментирован
+  };
 
-  if (isMaster) {
-    // Становимся клиентом
-    try {
-      await updateProfile({ role: 'client' });
-      toast({ title: 'Вы теперь клиент' });
-      navigate('/');
-    } catch (err: any) {
-      toast({ title: 'Ошибка', description: err.message, variant: 'destructive' });
+  const switchRole = async () => {
+    if (!user || !profile) return;
+
+    if (isMaster) {
+      // Становимся клиентом
+      try {
+        await updateProfile({ role: 'client' });
+        toast({ title: 'Вы теперь клиент' });
+        navigate('/');
+      } catch (err: any) {
+        toast({ title: 'Ошибка', description: err.message, variant: 'destructive' });
+      }
+    } else {
+      // Становимся мастером — открываем анкету
+      navigate('/master-setup');
     }
-  } else {
-    // Становимся мастером — открываем анкету
-    navigate('/master-setup');
-  }
-};
+  };
 
   const handleDeleteAccount = async () => {
-    if (!user) return;
-    setIsDeleting(true);
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      if (!token) throw new Error('No session');
-
-      const res = await supabase.functions.invoke('delete-account', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (res.error) throw res.error;
-
-      await supabase.auth.signOut();
-      navigate('/auth');
-      toast({
-        title: 'Аккаунт удалён',
-        description: 'Ваш аккаунт успешно удалён. Вы можете зарегистрироваться снова в любое время.',
-      });
-    } catch (err: any) {
-      toast({ title: 'Ошибка', description: err.message || 'Не удалось удалить аккаунт', variant: 'destructive' });
-    } finally {
-      setIsDeleting(false);
-    }
+    // Временно отключено
+    toast({ title: 'Удаление аккаунта временно отключено', variant: 'default' });
+    return;
   };
 
   return (
