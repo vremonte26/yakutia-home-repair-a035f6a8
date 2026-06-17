@@ -101,15 +101,29 @@ export default function AuthPage() {
     e.preventDefault();
     const phone = phoneDigits(regPhone);
     const email = regEmail.trim().toLowerCase();
-    if (!phone) { setErrorMsg('Введите корректный телефон'); return; }
-    if (!email || !/^\S+@\S+\.\S+$/.test(email)) { setErrorMsg('Введите корректный email'); return; }
-    if (!agreed) return;
+    if (!phone) { 
+      setErrorMsg('Введите корректный телефон'); 
+      return; 
+    }
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) { 
+      setErrorMsg('Введите корректный email'); 
+      return; 
+    }
+    if (!agreed) {
+      setErrorMsg('Примите условия соглашения');
+      return;
+    }
     
     // Проверяем, есть ли уже такой номер
-    const users = JSON.parse(localStorage.getItem('masterbul_users') || '[]');
-    if (users.find((u: any) => u.phone === phone)) {
-      setErrorMsg('Этот телефон уже зарегистрирован. Войдите в аккаунт.');
-      return;
+    try {
+      const users = JSON.parse(localStorage.getItem('masterbul_users') || '[]');
+      if (users.find((u: any) => u.phone === phone)) {
+        setErrorMsg('Этот телефон уже зарегистрирован. Войдите в аккаунт.');
+        return;
+      }
+    } catch (e) {
+      // Если ошибка - просто игнорируем
+      console.log('Ошибка проверки пользователей:', e);
     }
     
     openOtp('register', phone);
@@ -134,12 +148,17 @@ export default function AuthPage() {
       const email = otpMode === 'login' ? loginEmail.trim() : regEmail.trim().toLowerCase();
       const name = otpMode === 'register' ? regName.trim() : '';
       
-      // Сохраняем пользователя в localStorage
-      const users = JSON.parse(localStorage.getItem('masterbul_users') || '[]');
+      // Получаем список пользователей
+      let users = [];
+      try {
+        users = JSON.parse(localStorage.getItem('masterbul_users') || '[]');
+      } catch (e) {
+        users = [];
+      }
       
       if (otpMode === 'login') {
         // Вход - проверяем, есть ли пользователь
-        const user = users.find((u: any) => u.phone === phone || u.email === email);
+        const user = users.find((u: any) => u.phone === phone || (u.email && u.email === email));
         if (!user) {
           // Если нет - создаем нового
           const newUser = {
@@ -249,7 +268,7 @@ export default function AuthPage() {
                   <label className="text-sm font-medium">Email <span className="text-muted-foreground font-normal">(опционально)</span></label>
                   <Input type="email" placeholder="you@example.com" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full">
                   Получить код
                 </Button>
               </form>
@@ -284,7 +303,7 @@ export default function AuthPage() {
                     <Link to="/privacy" target="_blank" className="text-primary underline">обработку персональных данных</Link>
                   </span>
                 </label>
-                <Button type="submit" className="w-full" disabled={!regValid || loading}>
+                <Button type="submit" className="w-full" disabled={!regValid}>
                   Зарегистрироваться
                 </Button>
               </form>
