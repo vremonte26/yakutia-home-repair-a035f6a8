@@ -36,8 +36,8 @@ export default function MasterSetup() {
             <CardDescription>
               Ваш профиль мастера подтверждён модератором. Для изменения данных обратитесь в поддержку.
             </CardDescription>
-            <Button variant="outline" className="mt-4" onClick={() => navigate(-1)}>
-              <ArrowLeft className="h-4 w-4 mr-2" /> Назад
+            <Button variant="outline" className="mt-4" onClick={() => navigate('/')}>
+              <ArrowLeft className="h-4 w-4 mr-2" /> На главную
             </Button>
           </CardContent>
         </Card>
@@ -148,11 +148,11 @@ export default function MasterSetup() {
         <CardHeader>
           <button
             type="button"
-            onClick={() => navigate('/role-selection')}
+            onClick={() => navigate('/')}
             className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            Назад
+            На главную
           </button>
           <CardTitle className="text-xl font-extrabold">Анкета мастера</CardTitle>
           <CardDescription>Заполните анкету для прохождения модерации</CardDescription>
