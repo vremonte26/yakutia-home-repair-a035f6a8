@@ -166,6 +166,7 @@ export default function AuthPage() {
           name: name,
           phone: phone,
           email: email || '',
+          role: '',
           registeredAt: new Date().toISOString(),
         };
         users.push(user);
