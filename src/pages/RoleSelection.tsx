@@ -1,151 +1,95 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { User, Wrench, ArrowLeft } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Wrench, User, Hammer } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function RoleSelection() {
-  const { user, refreshProfile, signOut } = useAuth();
-  const { toast } = useToast();
+  const { user, updateProfile } = useAuth();
   const navigate = useNavigate();
-  const [showNameInput, setShowNameInput] = useState(false);
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const selectClient = async () => {
-    setShowNameInput(true);
-  };
+  const handleRoleSelect = async (role: 'client' | 'master') => {
+    if (!name.trim()) {
+      setError('Введите ваше имя');
+      return;
+    }
 
-  const confirmClient = async () => {
-    if (!user) return;
     setLoading(true);
-    const { error } = await supabase.rpc('upsert_client_data', {
-      _name: name.trim() || 'Клиент',
-      _photo: null,
-      _phone: null,
-    });
-    if (!error) {
-      await supabase.rpc('switch_active_role', { _new_role: 'client' });
+    setError('');
+
+    try {
+      // Сохраняем имя и роль через updateProfile (он работает с localStorage)
+      await updateProfile({ 
+        name: name.trim(),
+        role: role 
+      });
+
+      if (role === 'master') {
+        navigate('/master-setup');
+      } else {
+        navigate('/');
+      }
+    } catch (err: any) {
+      setError('Ошибка: ' + err.message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-    if (error) {
-      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
-      return;
-    }
-    await refreshProfile();
-    navigate('/');
   };
-
-  const selectMaster = async () => {
-    if (!user) return;
-    const { error } = await supabase
-      .from('profiles')
-      .update({ role: 'master' as const, active_role: 'master' as const })
-      .eq('id', user.id);
-    if (error) {
-      toast({ title: 'Ошибка', description: error.message, variant: 'destructive' });
-      return;
-    }
-    await refreshProfile();
-    navigate('/master-setup');
-  };
-
-  if (showNameInput) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <div className="w-full max-w-md space-y-6 animate-fade-in">
-          <button
-            type="button"
-            onClick={() => setShowNameInput(false)}
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Назад
-          </button>
-
-          <div className="text-center space-y-2">
-            <h1 className="text-2xl font-extrabold tracking-tight">Как вас зовут?</h1>
-            <p className="text-muted-foreground text-sm">Можно пропустить</p>
-          </div>
-
-          <Input
-            placeholder="Ваше имя"
-            value={name}
-            onChange={e => setName(e.target.value)}
-            autoFocus
-          />
-
-          <Button className="w-full" onClick={confirmClient} disabled={loading}>
-            {loading ? 'Загрузка...' : 'Продолжить'}
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-lg space-y-6 animate-fade-in">
-        <button
-          type="button"
-          onClick={signOut}
-          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Выйти
-        </button>
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-primary flex items-center justify-center">
+            <Wrench className="h-7 w-7 text-primary-foreground" />
+          </div>
+          <CardTitle className="text-2xl">Выберите роль</CardTitle>
+          <CardDescription>
+            Кто вы в приложении МастерБул?
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="text-sm font-medium">Ваше имя</label>
+            <Input
+              placeholder="Введите ваше имя"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1"
+            />
+          </div>
 
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-extrabold tracking-tight">Кто вы?</h1>
-          <p className="text-muted-foreground">Выберите вашу роль для начала работы</p>
-        </div>
+          {error && (
+            <p className="text-sm text-red-600">{error}</p>
+          )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Card
-            className="group cursor-pointer hover:border-primary hover:shadow-lg transition-all"
-            onClick={selectClient}
-          >
-            <CardContent className="p-6 text-center space-y-4">
-              <div className="mx-auto w-16 h-16 rounded-2xl bg-accent flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                <User className="h-8 w-8" />
-              </div>
-              <div>
-                <h2 className="font-bold text-lg">Я клиент</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Ищу мастера для ремонта
-                </p>
-              </div>
-              <Button variant="outline" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                Выбрать
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card
-            className="group cursor-pointer hover:border-primary hover:shadow-lg transition-all"
-            onClick={selectMaster}
-          >
-            <CardContent className="p-6 text-center space-y-4">
-              <div className="mx-auto w-16 h-16 rounded-2xl bg-accent flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                <Wrench className="h-8 w-8" />
-              </div>
-              <div>
-                <h2 className="font-bold text-lg">Я мастер</h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Выполняю ремонтные работы
-                </p>
-              </div>
-              <Button variant="outline" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                Выбрать
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              onClick={() => handleRoleSelect('client')}
+              disabled={loading || !name.trim()}
+              className="h-20 flex-col gap-1"
+              variant="outline"
+            >
+              <User className="h-6 w-6" />
+              <span>Клиент</span>
+            </Button>
+            <Button
+              onClick={() => handleRoleSelect('master')}
+              disabled={loading || !name.trim()}
+              className="h-20 flex-col gap-1"
+              variant="outline"
+            >
+              <Hammer className="h-6 w-6" />
+              <span>Мастер</span>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
