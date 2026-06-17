@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -8,7 +6,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Wrench } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { Link } from 'react-router-dom';
 
 const OTP_LENGTH = 4;
@@ -24,6 +21,7 @@ function formatPhone(raw: string) {
   if (d.length >= 9) out += '-' + d.slice(9, 11);
   return out;
 }
+
 function phoneDigits(raw: string) {
   const d = raw.replace(/\D/g, '').replace(/^8/, '7');
   return d.length === 11 ? '+' + d : '';
@@ -55,9 +53,6 @@ export default function AuthPage() {
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
   const submittingRef = useRef(false);
 
-  const { signIn, signUp } = useAuth();
-  const { toast } = useToast();
-
   useEffect(() => {
     if (!otpOpen || secondsLeft <= 0) return;
     const t = setInterval(() => setSecondsLeft(s => Math.max(0, s - 1)), 1000);
@@ -79,7 +74,7 @@ export default function AuthPage() {
   const generateCode = () =>
     Math.floor(1000 + Math.random() * 9000).toString().padStart(OTP_LENGTH, '0');
 
-  const openOtp = (mode: 'login' | 'register', target: string, phone: string) => {
+  const openOtp = (mode: 'login' | 'register', target: string) => {
     const code = generateCode();
     setSentCode(code);
     setCodeExpiresAt(Date.now() + 5 * 60 * 1000);
@@ -91,76 +86,95 @@ export default function AuthPage() {
     setOtpOpen(true);
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const phone = phoneDigits(loginPhone);
     const email = loginEmail.trim();
     if (!phone && !email) {
-      toast({ title: 'Укажите телефон или email', variant: 'destructive' });
+      setErrorMsg('Укажите телефон или email');
       return;
     }
-    openOtp('login', email || phone, phone);
+    openOtp('login', email || phone);
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = (e: React.FormEvent) => {
     e.preventDefault();
     const phone = phoneDigits(regPhone);
     const email = regEmail.trim().toLowerCase();
-    if (!phone) { toast({ title: 'Введите корректный телефон', variant: 'destructive' }); return; }
-    if (!email || !/^\S+@\S+\.\S+$/.test(email)) { toast({ title: 'Введите корректный email', variant: 'destructive' }); return; }
+    if (!phone) { setErrorMsg('Введите корректный телефон'); return; }
+    if (!email || !/^\S+@\S+\.\S+$/.test(email)) { setErrorMsg('Введите корректный email'); return; }
     if (!agreed) return;
-
-    setLoading(true);
-    // uniqueness check
-    const { data: existing } = await supabase
-      .from('profiles')
-      .select('id, phone')
-      .eq('phone', phone)
-      .maybeSingle();
-    setLoading(false);
-    if (existing) {
-      toast({ title: 'Этот телефон уже зарегистрирован', description: 'Войдите в существующий аккаунт', variant: 'destructive' });
+    
+    // Проверяем, есть ли уже такой номер
+    const users = JSON.parse(localStorage.getItem('masterbul_users') || '[]');
+    if (users.find((u: any) => u.phone === phone)) {
+      setErrorMsg('Этот телефон уже зарегистрирован. Войдите в аккаунт.');
       return;
     }
-    openOtp('register', email, phone);
+    
+    openOtp('register', phone);
   };
 
-  const submitCode = async (code: string) => {
+  const submitCode = (code: string) => {
     if (submittingRef.current) return;
     submittingRef.current = true;
+    
     if (code !== sentCode || Date.now() > codeExpiresAt) {
       setErrorMsg('Неверный или просроченный код. Попробуйте снова');
       resetOtp();
       submittingRef.current = false;
       return;
     }
+    
     setErrorMsg('');
     setLoading(true);
+    
     try {
+      const phone = phoneDigits(otpMode === 'login' ? loginPhone : regPhone);
+      const email = otpMode === 'login' ? loginEmail.trim() : regEmail.trim().toLowerCase();
+      const name = otpMode === 'register' ? regName.trim() : '';
+      
+      // Сохраняем пользователя в localStorage
+      const users = JSON.parse(localStorage.getItem('masterbul_users') || '[]');
+      
       if (otpMode === 'login') {
-        const phone = phoneDigits(loginPhone);
-        const email = loginEmail.trim().toLowerCase();
-        const fakeEmail = email || `${phone.replace(/\D/g, '')}@vremonte.local`;
-        const password = `otp_${(phone || email).replace(/\D/g, '')}_secure`;
-        try {
-          await signIn(fakeEmail, password);
-        } catch {
-          await signUp(fakeEmail, password, '', phone);
+        // Вход - проверяем, есть ли пользователь
+        const user = users.find((u: any) => u.phone === phone || u.email === email);
+        if (!user) {
+          // Если нет - создаем нового
+          const newUser = {
+            id: Date.now().toString(),
+            name: 'Пользователь',
+            phone: phone,
+            email: email || '',
+            registeredAt: new Date().toISOString(),
+          };
+          users.push(newUser);
+          localStorage.setItem('masterbul_users', JSON.stringify(users));
+          localStorage.setItem('masterbul_current_user', JSON.stringify(newUser));
+        } else {
+          localStorage.setItem('masterbul_current_user', JSON.stringify(user));
         }
       } else {
-        const phone = phoneDigits(regPhone);
-        const email = regEmail.trim().toLowerCase();
-        const password = `otp_${phone.replace(/\D/g, '')}_secure`;
-        try {
-          await signUp(email, password, regName.trim(), phone);
-        } catch (err: any) {
-          // fallback to sign in if already registered in auth
-          await signIn(email, password);
-        }
+        // Регистрация
+        const newUser = {
+          id: Date.now().toString(),
+          name: name || 'Пользователь',
+          phone: phone,
+          email: email,
+          registeredAt: new Date().toISOString(),
+        };
+        users.push(newUser);
+        localStorage.setItem('masterbul_users', JSON.stringify(users));
+        localStorage.setItem('masterbul_current_user', JSON.stringify(newUser));
       }
+      
       setOtpOpen(false);
+      // Перезагружаем страницу для перехода в приложение
+      window.location.href = '/';
+      
     } catch (err: any) {
-      toast({ title: 'Ошибка', description: err.message, variant: 'destructive' });
+      setErrorMsg('Ошибка: ' + err.message);
       resetOtp();
     } finally {
       setLoading(false);
@@ -210,8 +224,8 @@ export default function AuthPage() {
           <div className="mx-auto w-14 h-14 rounded-2xl bg-primary flex items-center justify-center">
             <Wrench className="h-7 w-7 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl font-extrabold tracking-tight">Времонте</CardTitle>
-          <CardDescription>Мастера и заказы в Якутии</CardDescription>
+          <CardTitle className="text-2xl font-extrabold tracking-tight">МастерБул</CardTitle>
+          <CardDescription>Найди мастера в своем городе</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={tab} onValueChange={(v) => setTab(v as 'login' | 'register')}>
@@ -279,7 +293,7 @@ export default function AuthPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={otpOpen} onOpenChange={() => { /* locked */ }}>
+      <Dialog open={otpOpen} onOpenChange={() => {}}>
         <DialogContent
           onPointerDownOutside={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
@@ -346,7 +360,6 @@ export default function AuthPage() {
                   setSecondsLeft(RESEND_SECONDS);
                   resetOtp();
                   setErrorMsg('');
-                  toast({ title: 'Новый код сгенерирован' });
                 }}
                 className="text-primary font-semibold hover:underline"
               >
