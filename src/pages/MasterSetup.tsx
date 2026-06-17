@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { CATEGORIES } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Camera, X } from 'lucide-react';
 import { compressImageSafe } from '@/lib/imageCompression';
 
@@ -16,6 +16,7 @@ export default function MasterSetup() {
   const { user, profile, refreshProfile } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const [categories, setCategories] = useState<string[]>([]);
   
   const [about, setAbout] = useState('');
@@ -36,8 +37,11 @@ export default function MasterSetup() {
             <CardDescription>
               Ваш профиль мастера подтверждён модератором. Для изменения данных обратитесь в поддержку.
             </CardDescription>
-            <Button variant="outline" className="mt-4" onClick={() => navigate('/')}>
-              <ArrowLeft className="h-4 w-4 mr-2" /> На главную
+            <Button variant="outline" className="mt-4" onClick={() => {
+              const from = location.state?.from || '/';
+              navigate(from);
+            }}>
+              <ArrowLeft className="h-4 w-4 mr-2" /> Назад
             </Button>
           </CardContent>
         </Card>
@@ -148,11 +152,14 @@ export default function MasterSetup() {
         <CardHeader>
           <button
             type="button"
-            onClick={() => navigate('/')}
+            onClick={() => {
+              const from = location.state?.from || '/';
+              navigate(from);
+            }}
             className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            На главную
+            Назад
           </button>
           <CardTitle className="text-xl font-extrabold">Анкета мастера</CardTitle>
           <CardDescription>Заполните анкету для прохождения модерации</CardDescription>
@@ -235,7 +242,6 @@ export default function MasterSetup() {
                 ))}
               </div>
             </div>
-
 
             <div className="space-y-2">
               <label className="text-sm font-medium">О себе</label>
