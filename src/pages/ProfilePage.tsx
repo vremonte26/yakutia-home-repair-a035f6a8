@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,7 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function ProfilePage() {
-  const { profile, signOut, refreshProfile, user } = useAuth();
+  const { profile, signOut, refreshProfile, user, updateProfile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [showPendingNotice, setShowPendingNotice] = useState(false);
@@ -170,26 +169,22 @@ export default function ProfilePage() {
   };
 
   const switchRole = async () => {
-    if (!user) return;
+  if (!user || !profile) return;
 
-    if (isMaster) {
-      await supabase.from('profiles').update({ role: 'client' as const }).eq('id', user.id);
-      await refreshProfile();
+  if (isMaster) {
+    // Становимся клиентом
+    try {
+      await updateProfile({ role: 'client' });
       toast({ title: 'Вы теперь клиент' });
       navigate('/');
-    } else {
-      if (profile.is_verified === null) {
-        navigate('/master-setup');
-      } else if (profile.is_verified === false) {
-        setShowPendingNotice(true);
-      } else {
-        await supabase.from('profiles').update({ role: 'master' as const }).eq('id', user.id);
-        await refreshProfile();
-        toast({ title: 'Вы теперь мастер' });
-        navigate('/');
-      }
+    } catch (err: any) {
+      toast({ title: 'Ошибка', description: err.message, variant: 'destructive' });
     }
-  };
+  } else {
+    // Становимся мастером — открываем анкету
+    navigate('/master-setup');
+  }
+};
 
   const handleDeleteAccount = async () => {
     if (!user) return;
