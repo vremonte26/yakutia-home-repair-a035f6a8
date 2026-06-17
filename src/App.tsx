@@ -52,7 +52,7 @@ function AppRoutes() {
     );
   }
 
-  if (profile && !profile.name) {
+  if (profile && !profile.role) {
     if (profile.role === 'master') {
       return (
         <Routes>
