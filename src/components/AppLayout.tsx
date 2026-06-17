@@ -33,23 +33,25 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   const toggleRole = async () => {
     if (!user || !profile || switching) return;
-    const newRole = isMaster ? 'client' : 'master';
-    setSwitching(true);
     
-    try {
-      // Обновляем роль через updateProfile (работает с localStorage)
-      await updateProfile({ role: newRole });
-      
-      // Перезагружаем страницу, чтобы применить изменения
-      window.location.href = '/';
-    } catch (err: any) {
-      toast({ 
-        title: 'Ошибка переключения роли', 
-        description: err.message, 
-        variant: 'destructive' 
-      });
-    } finally {
-      setSwitching(false);
+    if (isMaster) {
+      // Если мастер → становимся клиентом
+      setSwitching(true);
+      try {
+        await updateProfile({ role: 'client' });
+        window.location.href = '/';
+      } catch (err: any) {
+        toast({ 
+          title: 'Ошибка переключения роли', 
+          description: err.message, 
+          variant: 'destructive' 
+        });
+      } finally {
+        setSwitching(false);
+      }
+    } else {
+      // Если клиент → открываем анкету мастера
+      navigate('/master-setup');
     }
   };
 
