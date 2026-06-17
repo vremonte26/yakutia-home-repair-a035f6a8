@@ -50,8 +50,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
         setSwitching(false);
       }
     } else {
-      // Если клиент → открываем анкету мастера
-      navigate('/master-setup');
+      // Если клиент → открываем анкету с информацией о том, откуда пришли
+      navigate('/master-setup', { state: { from: '/' } });
     }
   };
 
