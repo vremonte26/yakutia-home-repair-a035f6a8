@@ -79,7 +79,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <Wrench className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="font-extrabold text-lg">Времонте</span>
+            <span className="font-extrabold text-lg">МастерБул</span>
           </Link>
           <div className="flex items-center gap-2">
             {profile && <NotificationBell />}
