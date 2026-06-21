@@ -1,7 +1,7 @@
 import { ReactNode, useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, PlusCircle, User, Wrench, ClipboardList, Map, MessageCircle, MapPin } from 'lucide-react';
+import { Home, User, Wrench, ClipboardList, Map, MessageCircle, MapPin } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 import { useToast } from '@/hooks/use-toast';
 import { useUserLocation } from '@/hooks/useUserLocation';
@@ -35,7 +35,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
     if (!user || !profile || switching) return;
     
     if (isMaster) {
-      // Если мастер → становимся клиентом
       setSwitching(true);
       try {
         await updateProfile({ role: 'client' });
@@ -50,26 +49,17 @@ export function AppLayout({ children }: { children: ReactNode }) {
         setSwitching(false);
       }
     } else {
-      // Если клиент → открываем анкету с информацией о том, откуда пришли
       navigate('/master-setup', { state: { from: '/' } });
     }
   };
 
-  const navItems = isMaster
-    ? [
-        { to: '/', icon: ClipboardList, label: 'Лента' },
-        { to: '/map', icon: Map, label: 'Карта' },
-        { to: '/chats', icon: MessageCircle, label: 'Чаты' },
-        { to: '/my-responses', icon: Wrench, label: 'Отклики' },
-        { to: '/profile', icon: User, label: 'Профиль' },
-      ]
-    : [
-        { to: '/', icon: Home, label: 'Лента' },
-        { to: '/map', icon: Map, label: 'Карта' },
-        { to: '/chats', icon: MessageCircle, label: 'Чаты' },
-        { to: '/create-task', icon: PlusCircle, label: 'Создать' },
-        { to: '/profile', icon: User, label: 'Профиль' },
-      ];
+  // 🔥 УБРАЛИ "Создать" из навигации
+  const navItems = [
+    { to: '/', icon: Home, label: 'Лента' },
+    { to: '/map', icon: Map, label: 'Карта' },
+    { to: '/chats', icon: MessageCircle, label: 'Чаты' },
+    { to: '/profile', icon: User, label: 'Профиль' },
+  ];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
