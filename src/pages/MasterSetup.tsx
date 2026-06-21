@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { CATEGORIES } from '@/lib/constants';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Camera, X } from 'lucide-react';
+import { ArrowLeft, Camera, X, Shield, FileText } from 'lucide-react';
 import { compressImageSafe } from '@/lib/imageCompression';
 
 export default function MasterSetup() {
@@ -26,6 +26,19 @@ export default function MasterSetup() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Фото паспорта
+  const [passportFile, setPassportFile] = useState<File | null>(null);
+  const [passportPreview, setPassportPreview] = useState<string | null>(null);
+  const passportInputRef = useRef<HTMLInputElement>(null);
+  
+  // Селфи с паспортом
+  const [selfieFile, setSelfieFile] = useState<File | null>(null);
+  const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
+  const selfieInputRef = useRef<HTMLInputElement>(null);
+  
+  // Согласие на обработку ПДн
+  const [consentGiven, setConsentGiven] = useState(false);
 
   // Block verified masters from editing setup
   if (profile?.is_verified === true) {
@@ -70,10 +83,52 @@ export default function MasterSetup() {
     setPhotoPreview(URL.createObjectURL(file));
   };
 
+  const handlePassportSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Выберите изображение', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'Максимальный размер — 5 МБ', variant: 'destructive' });
+      return;
+    }
+    setPassportFile(file);
+    setPassportPreview(URL.createObjectURL(file));
+  };
+
+  const handleSelfieSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Выберите изображение', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: 'Максимальный размер — 2 МБ', variant: 'destructive' });
+      return;
+    }
+    setSelfieFile(file);
+    setSelfiePreview(URL.createObjectURL(file));
+  };
+
   const removePhoto = () => {
     setPhotoFile(null);
     setPhotoPreview(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removePassport = () => {
+    setPassportFile(null);
+    setPassportPreview(null);
+    if (passportInputRef.current) passportInputRef.current.value = '';
+  };
+
+  const removeSelfie = () => {
+    setSelfieFile(null);
+    setSelfiePreview(null);
+    if (selfieInputRef.current) selfieInputRef.current.value = '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,17 +139,29 @@ export default function MasterSetup() {
       return;
     }
     if (!photoFile) {
-      toast({ title: 'Загрузите фото', variant: 'destructive' });
+      toast({ title: 'Загрузите фото профиля', variant: 'destructive' });
+      return;
+    }
+    if (!passportFile) {
+      toast({ title: 'Загрузите фото паспорта', variant: 'destructive' });
+      return;
+    }
+    if (!selfieFile) {
+      toast({ title: 'Сделайте селфи с паспортом', variant: 'destructive' });
       return;
     }
     if (categories.length === 0) {
       toast({ title: 'Выберите хотя бы одну категорию', variant: 'destructive' });
       return;
     }
+    if (!consentGiven) {
+      toast({ title: 'Дайте согласие на обработку персональных данных', variant: 'destructive' });
+      return;
+    }
     setLoading(true);
 
     try {
-      // Compress + upload photo
+      // 1. Загружаем аватарку
       let compressionFailed = false;
       const toUpload = await compressImageSafe(photoFile, undefined, () => {
         compressionFailed = true;
@@ -102,17 +169,40 @@ export default function MasterSetup() {
       if (compressionFailed) {
         toast({ title: 'Не удалось сжать фото — загружаем оригинал' });
       }
-      const ext = (toUpload instanceof File ? toUpload.name : photoFile.name).split('.').pop();
-      const filePath = `${user.id}/avatar.${ext}`;
-      const { error: uploadError } = await supabase.storage
+      const avatarExt = (toUpload instanceof File ? toUpload.name : photoFile.name).split('.').pop();
+      const avatarPath = `${user.id}/avatar.${avatarExt}`;
+      const { error: avatarError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, toUpload, { upsert: true, contentType: toUpload.type });
-      if (uploadError) throw uploadError;
+        .upload(avatarPath, toUpload, { upsert: true, contentType: toUpload.type });
+      if (avatarError) throw avatarError;
+      const { data: avatarUrlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(avatarPath);
+      const photoUrl = `${avatarUrlData.publicUrl}?t=${Date.now()}`;
 
-      const { data: urlData } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-      const photoUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+      // 2. Загружаем фото паспорта
+      const passportExt = passportFile.name.split('.').pop();
+      const passportPath = `${user.id}/passport.${passportExt}`;
+      const { error: passportError } = await supabase.storage
+        .from('master_documents')
+        .upload(passportPath, passportFile, { upsert: true, contentType: passportFile.type });
+      if (passportError) throw passportError;
+      const { data: passportUrlData } = supabase.storage
+        .from('master_documents')
+        .getPublicUrl(passportPath);
+      const passportUrl = passportUrlData.publicUrl;
+
+      // 3. Загружаем селфи с паспортом
+      const selfieExt = selfieFile.name.split('.').pop();
+      const selfiePath = `${user.id}/selfie.${selfieExt}`;
+      const { error: selfieError } = await supabase.storage
+        .from('master_documents')
+        .upload(selfiePath, selfieFile, { upsert: true, contentType: selfieFile.type });
+      if (selfieError) throw selfieError;
+      const { data: selfieUrlData } = supabase.storage
+        .from('master_documents')
+        .getPublicUrl(selfiePath);
+      const selfieUrl = selfieUrlData.publicUrl;
 
       const bypassModeration = import.meta.env.VITE_BYPASS_MODERATION === 'true';
 
@@ -125,8 +215,12 @@ export default function MasterSetup() {
           about,
           phone: phone || undefined,
           photo: photoUrl,
+          passport_photo: passportUrl,
+          selfie_photo: selfieUrl,
           is_verified: bypassModeration ? true : false,
           is_photo_moderated: bypassModeration ? true : false,
+          consent_given: true,
+          consent_date: new Date().toISOString(),
         })
         .eq('id', user.id);
 
@@ -167,7 +261,7 @@ export default function MasterSetup() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Фото <span className="text-destructive">*</span></label>
+              <label className="text-sm font-medium">Фото профиля <span className="text-destructive">*</span></label>
               <div className="flex items-center gap-4">
                 {photoPreview ? (
                   <div className="relative group">
@@ -205,7 +299,7 @@ export default function MasterSetup() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Ваше имя</label>
+              <label className="text-sm font-medium">Ваше имя <span className="text-destructive">*</span></label>
               <Input
                 value={name}
                 onChange={e => setName(e.target.value)}
@@ -224,7 +318,7 @@ export default function MasterSetup() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Категории работ</label>
+              <label className="text-sm font-medium">Категории работ <span className="text-destructive">*</span></label>
               <div className="grid grid-cols-2 gap-2">
                 {CATEGORIES.map(cat => (
                   <label
@@ -251,6 +345,106 @@ export default function MasterSetup() {
                 onChange={e => setAbout(e.target.value)}
                 rows={3}
               />
+            </div>
+
+            {/* Фото паспорта */}
+            <div className="space-y-2 border-t pt-4">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Фото паспорта (разворот с фото и пропиской) <span className="text-destructive">*</span>
+              </label>
+              <div className="flex items-center gap-4">
+                {passportPreview ? (
+                  <div className="relative group">
+                    <img
+                      src={passportPreview}
+                      alt="Паспорт"
+                      className="w-20 h-20 rounded-2xl object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={removePassport}
+                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => passportInputRef.current?.click()}
+                    className="w-20 h-20 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                  >
+                    <Camera className="h-6 w-6" />
+                    <span className="text-xs">Загрузить</span>
+                  </button>
+                )}
+                <input
+                  ref={passportInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePassportSelect}
+                />
+                <span className="text-xs text-muted-foreground">Макс. 5 МБ</span>
+              </div>
+            </div>
+
+            {/* Селфи с паспортом */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Селфи с паспортом в руках <span className="text-destructive">*</span>
+              </label>
+              <div className="flex items-center gap-4">
+                {selfiePreview ? (
+                  <div className="relative group">
+                    <img
+                      src={selfiePreview}
+                      alt="Селфи с паспортом"
+                      className="w-20 h-20 rounded-2xl object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeSelfie}
+                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => selfieInputRef.current?.click()}
+                    className="w-20 h-20 rounded-2xl border-2 border-dashed border-muted-foreground/30 flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                  >
+                    <Camera className="h-6 w-6" />
+                    <span className="text-xs">Селфи</span>
+                  </button>
+                )}
+                <input
+                  ref={selfieInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleSelfieSelect}
+                />
+                <span className="text-xs text-muted-foreground">Макс. 2 МБ</span>
+              </div>
+            </div>
+
+            {/* Согласие на обработку ПДн */}
+            <div className="space-y-2 border-t pt-4">
+              <label className="flex items-start gap-2 text-sm cursor-pointer">
+                <Checkbox
+                  checked={consentGiven}
+                  onCheckedChange={(v) => setConsentGiven(v === true)}
+                  className="mt-0.5"
+                />
+                <span className="text-muted-foreground leading-snug">
+                  Я даю согласие на обработку моих персональных данных, включая паспортные данные и биометрические данные (фото, селфи), в соответствии с Федеральным законом № 152-ФЗ «О персональных данных» <span className="text-destructive">*</span>
+                </span>
+              </label>
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
